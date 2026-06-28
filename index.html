@@ -116,78 +116,113 @@ const STATE = {
 
 const STORAGE_KEY = 'imposter-v1';
 
-/* ---------- Word Packs ---------- */
+/* ---------- Word Packs ----------
+   Each pack is an array of sub-groups: { theme: '...', words: [...] }
+   Sub-groups give the imposter a specific hint category
+   (e.g. 'Sitcoms', 'Reality TV', 'Fast Food Chains') rather than the
+   generic 'TV Show'. chosenPack() flattens to a list for picking the
+   secret word; makeHint() finds the sub-group containing the secret. */
 const PACKS = {
-  random: null, // random across all
+  random: null,
   brands: [
-    'Apple','Google','Nike','Adidas','Samsung','Spotify','Netflix','Disney','Tesla','Amazon',
-    'Uber','Airbnb','Instagram','TikTok','YouTube','Twitter','Facebook','WhatsApp','Snapchat','Reddit',
-    'Pinterest','Twitch','Discord','Slack','Zoom','Microsoft','Sony','Nintendo','Xbox','PlayStation',
-    'Starbucks','Coca-Cola','Pepsi','Red Bull','Monster','Heineken','Guinness','Corona','Patagonia','Uniqlo',
-    'H&M','Zara','IKEA','Westfield','Myer','David Jones','Kmart','Target','Woolworths','Coles',
-    'Aldi','Costco','Whole Foods','Trader Joes','Chipotle','Subway','McDonalds','KFC','Dominos','Nandos',
-    'Glossier','Lululemon','Sephora','Beats','Dyson','GoPro','Canon','Polaroid','Lego',
-    'Marvel','DC','Pixar','HBO','Hulu','Prime Video','Paramount','Warner Bros','Universal','LEGO'
+    { theme:'Tech Giants', words:['Apple','Google','Microsoft','Samsung','Sony','Nvidia','Intel','IBM','Oracle','Adobe'] },
+    { theme:'Social & Streaming', words:['Instagram','TikTok','YouTube','Twitter','Facebook','WhatsApp','Snapchat','Reddit','Pinterest','Twitch'] },
+    { theme:'Streaming Platforms', words:['Netflix','Disney','Spotify','Hulu','Prime Video','HBO Max','Apple TV+','Paramount+','Stan','Binge'] },
+    { theme:'Coffee & Energy', words:['Starbucks','Red Bull','Monster','Gloria Jeans','Hussel','Campos','Pablo & Rusty','Genovese','Single O','Industry Beans'] },
+    { theme:'Big Soft Drinks', words:['Coca-Cola','Pepsi','Sprite','Fanta','Mountain Dew','Dr Pepper','7-Up','Schweppes','Lift','Kirks'] },
+    { theme:'Fast Food Chains', words:['McDonalds','KFC','Subway','Dominos','Nandos','Hungry Jacks','Red Rooster','Oporto','Sumo Salad','Zambrero'] },
+    { theme:'Casual Dining', words:['Chipotle','Nandos','Grilld','Hogs Breath','Outback','Sizzler','The Cheesecake Shop','San Churro','Bakers Delight','Michel Patisserie'] },
+    { theme:'Beer & Spirits', words:['Heineken','Guinness','Corona','Asahi','Sapporo','James Boag','Little Creatures','Somersby','Bundaberg','Jim Beam'] },
+    { theme:'Aussie Retailers', words:['Woolworths','Coles','Aldi','Kmart','Big W','Target','Myer','David Jones','Westfield','IKEA'] },
+    { theme:'Clothing Brands', words:['Nike','Adidas','Uniqlo','H&M','Zara','Patagonia','Lululemon','Country Road','Cotton On','Kookai'] },
+    { theme:'Beauty & Lifestyle', words:['Glossier','Sephora','Mecca','Priceline','The Body Shop','Lush','Aesop','Frank Body','Go-To','Sand & Sky'] },
+    { theme:'Ride Share & Travel', words:['Uber','Lyft','Airbnb','DiDi','Ola','Grab','Gojek','Bolt','Menulog','Deliveroo'] },
+    { theme:'Gaming & Entertainment', words:['Nintendo','Xbox','PlayStation','Beats','Dyson','GoPro','Canon','Polaroid','Lego','Marvel'] },
+    { theme:'Finance & Payment', words:['Afterpay','Zip Pay','Klarna','PayPal','Apple Pay','Google Pay','Samsung Wallet','CommBank','NAB','Up'] },
+    { theme:'Grocery Store Chains', words:['Trader Joes','Whole Foods','Costco','Aldi','IGA','Spudshed','Drakes','Foodland','Harris Farm','Romeos'] },
   ],
   tech: [
-    'Smartphone','Laptop','Tablet','Smartwatch','AirPods','VR Headset','Drone','E-Reader','Game Console','Streaming Stick',
-    'Bluetooth Speaker','Noise Cancelling Headphones','Mechanical Keyboard','Wireless Mouse','Webcam','Ring Light','Standing Desk','Ergonomic Chair','Monitor','USB-C Hub',
-    'Hard Drive','SSD','Power Bank','Wireless Charger','Smart Plug','Robot Vacuum','Smart Thermostat','Doorbell Camera','Smoke Alarm','Light Bulb',
-    'Electric Toothbrush','Hair Straightener','Hair Dryer','Electric Kettle','Air Fryer','Instant Pot','Espresso Machine','Blender','Coffee Grinder','Milk Frother',
-    'Streaming Service','VPN','Cloud Storage','Password Manager','Smart Speaker','Dash Cam','GPS Tracker','Fitness Tracker','Sleep Tracker','Smart Scale',
-    '3D Printer','Laser Cutter','Soldering Iron','Raspberry Pi','Arduino','Mechanical Pencil','Notion App','Slack Channel','Zoom Call','Google Doc'
+    { theme:'Phones & Audio', words:['Smartphone','Tablet','Smartwatch','AirPods','Bluetooth Speaker','Noise Cancelling Headphones','Earbuds','Over-Ear Headphones','E-Reader','Voice Recorder'] },
+    { theme:'Computer Gear', words:['Laptop','Mechanical Keyboard','Wireless Mouse','Webcam','Monitor','USB-C Hub','Docking Station','Trackpad','Graphics Tablet','Stylus'] },
+    { theme:'Desk Setup', words:['Standing Desk','Ergonomic Chair','Desk Lamp','Monitor Arm','Cable Tray','Foot Rest','Laptop Stand','Document Holder','Desk Mat','Wrist Rest'] },
+    { theme:'Smart Home', words:['Smart Plug','Robot Vacuum','Smart Thermostat','Doorbell Camera','Smoke Alarm','Smart Light Bulb','Smart Lock','Smart Speaker','Security Camera','Smart Fridge'] },
+    { theme:'Kitchen Gadgets', words:['Air Fryer','Instant Pot','Espresso Machine','Blender','Coffee Grinder','Milk Frother','Electric Kettle','Rice Cooker','Slow Cooker','Bread Maker'] },
+    { theme:'Personal Care Tech', words:['Electric Toothbrush','Hair Straightener','Hair Dryer','Electric Razor','Trimmer','Sonic Cleanser','LED Mask','Massage Gun','Foot Spa','Heated Curling Iron'] },
+    { theme:'Cameras & Creators', words:['Ring Light','GoPro','DSLR Camera','Mirrorless Camera','Instant Camera','Drone','Tripod','Gimbal','Lav Mic','Action Cam'] },
+    { theme:'Power & Storage', words:['Power Bank','Wireless Charger','Hard Drive','SSD','USB Stick','SD Card','Solar Charger','Battery Pack','Charging Dock','Cable Organiser'] },
+    { theme:'Maker Gear', words:['3D Printer','Laser Cutter','Soldering Iron','Raspberry Pi','Arduino','Multimeter','Bench Power Supply','Hot Glue Gun','Helping Hands','Wire Strippers'] },
+    { theme:'Fitness & Health', words:['Fitness Tracker','Sleep Tracker','Smart Scale','Heart Rate Monitor','Smart Water Bottle','Posture Corrector','TENS Machine','Blue Light Glasses','Smart Ring','Blood Pressure Monitor'] },
+    { theme:'Car Tech', words:['Dash Cam','GPS Tracker','Phone Mount','Car Charger','Bluetooth Car Kit','Reverse Camera','Tyre Pressure Monitor','Head-Up Display','Diagnostic Scanner','Roof Box'] },
+    { theme:'Apps & Services', words:['Streaming Service','VPN','Cloud Storage','Password Manager','Notion App','Slack Channel','Zoom Call','Google Doc','Project Management Tool','Calendar App'] },
   ],
   slang: [
-    'Slay','No Cap','Bussin','Mid','Rizz','Sigma','Gyatt','Skibidi','Fanum Tax','Ohio',
-    'Bet','Lowkey','Highkey','Slaps','Fire','GOAT','Sus','Drip','Vibe','Mood',
-    'Ghosting','Cushioning','Orbiting','Catfishing','Love Bombing','Gaslighting','Breadcrumbing','Situationship','Soft Launch','Hard Launch',
-    'Adulting','Girlboss','Girl Dinner','Hot Girl Walk','Lazy Girl Job','Quiet Quitting','Quiet Firing','Resentee','Bare Minimum Monday','Girl Math',
-    'Brat','Demure','Very Mindful Very Demure','Ick','ick list','ICK','ick factor','ick','main character','main character energy',
-    'Pick Me','Pick Me Girl','Pick Me Boy','Therapy Speak','Trauma Dump','Corecore','Weird Girl','Ferry Girl','That Girl','Cozy Girl',
-    'Goblin Mode','Bed Rotting','Doomscrolling','Touch Grass','Take the L','Catch These Hands','Its Giving','Serving','Serving Looks','Period',
-    'Hits Different','Understood the Assignment','The Vibes','Vibe Check','Big Mood','Iconic','Legend','Legendary','Slay Queen','Bestie'
+    { theme:'Gen Z Approved', words:['Slay','No Cap','Bussin','Mid','Rizz','Sigma','Gyatt','Skibidi','Fanum Tax','Ohio'] },
+    { theme:'Vibes & Mood', words:['Slaps','Fire','GOAT','Sus','Drip','Vibe','Mood','Hits Different','Big Mood','Iconic'] },
+    { theme:'Hype Words', words:['Bet','Lowkey','Highkey','Period','Understood the Assignment','Serving','Serving Looks','The Vibes','Vibe Check','Legendary'] },
+    { theme:'Dating Terms', words:['Ghosting','Cushioning','Orbiting','Catfishing','Love Bombing','Gaslighting','Breadcrumbing','Situationship','Soft Launch','Hard Launch'] },
+    { theme:'Work & Career', words:['Adulting','Girlboss','Quiet Quitting','Quiet Firing','Resentee','Bare Minimum Monday','Lazy Girl Job','Coffee Badging','Career Cushioning','Productivity Theatre'] },
+    { theme:'Girl Culture', words:['Girl Dinner','Hot Girl Walk','That Girl','Cozy Girl','Ferry Girl','Weird Girl','Girl Math','Tomato Girl','Coastal Grandmother','Quiet Luxury'] },
+    { theme:'Brat Summer', words:['Brat','Demure','Very Mindful Very Demure','Pick Me','Pick Me Girl','Pick Me Boy','Therapy Speak','Trauma Dump','Main Character','Main Character Energy'] },
+    { theme:'Doom & Rot', words:['Goblin Mode','Bed Rotting','Doomscrolling','Touch Grass','Lethargic','Rotting','Couch Lock','Lazy Sunday','Brain Rot','Phone Rot'] },
+    { theme:'Sassy Phrases', words:['Take the L','Catch These Hands','Its Giving','Bestie','Slay Queen','The Ick','ick factor','ick','ick list','Therapy Bill'] },
+    { theme:'Online Vibes', words:['Corecore','Goblincore','Coastalcore','Tomato Girl','Clean Girl','Mob Wife','Office Siren','Coastal Cowgirl','Blokette','Bedroom Pop'] },
   ],
   music: [
-    'Taylor Swift','Beyoncé','Drake','Rihanna','Adele','Ed Sheeran','Billie Eilish','Olivia Rodrigo','Dua Lipa','Harry Styles',
-    'The Weeknd','Bad Bunny','Kendrick Lamar','Travis Scott','Post Malone','Cardi B','Megan Thee Stallion','Lizzo','Doja Cat','SZA',
-    'Lana Del Rey','Arctic Monkeys','Tame Impala','Daft Punk','The Strokes','Florence and the Machine','Lorde','Halsey','Imagine Dragons','Maroon 5',
-    'Coldplay','Muse','Radiohead','Foo Fighters','Green Day','Blink-182','Sum 41','My Chemical Romance','Panic at the Disco','Fall Out Boy',
-    'Jay-Z','Kanye West','Eminem','Snoop Dogg','Outkast','Khalid','Anderson .Paak','Frank Ocean','Tyler the Creator','Childish Gambino',
-    'Spotify Wrapped','Vinyl Record','Cassette Tape','Walkman','Discman','iPod','MP3 Player','Boombox','Mixtape','Playlist',
-    'Coachella','Glastonbury','Splendour in the Grass','Laneway Festival','Reading Festival','SXSW','Bonnaroo','Lollapalooza','Primavera Sound','Tomorrowland',
-    'Spotify','Apple Music','Tidal','SoundCloud','Bandcamp','YouTube Music','Pandora','Last.fm','Deezer','Amazon Music'
+    { theme:'Pop Divas', words:['Taylor Swift','Beyonce','Rihanna','Adele','Billie Eilish','Olivia Rodrigo','Dua Lipa','Ariana Grande','Lady Gaga','Katy Perry'] },
+    { theme:'Pop Princes', words:['Harry Styles','Ed Sheeran','The Weeknd','Justin Bieber','Bruno Mars','Charlie Puth','Shawn Mendes','Niall Horan','Zayn','Lauv'] },
+    { theme:'Hip Hop Heavyweights', words:['Drake','Kendrick Lamar','Travis Scott','Post Malone','Cardi B','Megan Thee Stallion','Doja Cat','SZA','J Cole','Lil Nas X'] },
+    { theme:'R&B & Soul', words:['Lizzo','Anderson .Paak','Frank Ocean','Tyler the Creator','Childish Gambino','Khalid','H.E.R.','Daniel Caesar','Summer Walker','Jhené Aiko'] },
+    { theme:'Latin & Reggaeton', words:['Bad Bunny','J Balvin','Karol G','Rosalia','Shakira','Maluma','Daddy Yankee','Ozuna','Camila Cabello','Becky G'] },
+    { theme:'Indie & Alt', words:['Lana Del Rey','Arctic Monkeys','Tame Impala','The Strokes','Florence and the Machine','Lorde','Halsey','Mac DeMarco','Vampire Weekend','Cage the Elephant'] },
+    { theme:'Pop Rock Bands', words:['Imagine Dragons','Maroon 5','Coldplay','Muse','Radiohead','Twenty One Pilots','Glass Animals','The 1975','OneRepublic','Foster the People'] },
+    { theme:'Rock Classics', words:['Foo Fighters','Green Day','Blink-182','Sum 41','My Chemical Romance','Panic at the Disco','Fall Out Boy','Weezer','Paramore','Red Hot Chili Peppers'] },
+    { theme:'Rap Legends', words:['Jay-Z','Kanye West','Eminem','Snoop Dogg','Outkast','Tupac','Biggie','Nas','Kendrick Lamar','A Tribe Called Quest'] },
+    { theme:'Music Formats', words:['Vinyl Record','Cassette Tape','Walkman','Discman','iPod','MP3 Player','Boombox','Mixtape','CD','8-Track'] },
+    { theme:'Music Festivals', words:['Coachella','Glastonbury','Splendour in the Grass','Laneway Festival','Reading Festival','SXSW','Bonnaroo','Lollapalooza','Primavera Sound','Tomorrowland'] },
+    { theme:'Streaming Services', words:['Spotify','Apple Music','Tidal','SoundCloud','Bandcamp','YouTube Music','Pandora','Last.fm','Deezer','Amazon Music'] },
+    { theme:'Music Moments', words:['Spotify Wrapped','Album Drop','Track List','B-Side','Acoustic Version','Remix EP','Mixtape Friday','Listening Party','Vinyl Crackle','Album of the Year'] },
   ],
   tv: [
-    'Breaking Bad','Game of Thrones','Stranger Things','The Office','Friends','Seinfeld','The Sopranos','The Wire','Mad Men','Lost',
-    'Succession','Ted Lasso','The Bear','Severance','The White Lotus','Euphoria','Fleabag','Killing Eve','Big Little Lies','The Crown',
-    'Downton Abbey','Peaky Blinders','Sherlock','Doctor Who','Black Mirror','True Detective','The Night Manager','Line of Duty','Happy Valley','Mare of Easttown',
-    'Greys Anatomy','How I Met Your Mother','The Big Bang Theory','Parks and Recreation','Brooklyn Nine-Nine','Schitts Creek','The Good Place','New Girl','Gossip Girl','The OC',
-    'Sex and the City','Desperate Housewives','The Handmaids Tale','Bridgerton','Emily in Paris','The Morning Show','Ted Lasso','Only Murders in the Building','Abbott Elementary','Hacks',
-    'The Simpsons','Family Guy','South Park','Rick and Morty','BoJack Horseman','Big Mouth','Love is Blind','Too Hot to Handle','The Circle','Squid Game',
-    'Netflix','Hulu','Disney+','HBO Max','Apple TV+','Amazon Prime Video','Paramount+','Peacock','Stan','Binge',
-    'Reality TV','Dating Show','Cooking Show','Home Reno Show','True Crime Doc','Standup Special','Late Night Talk Show','Game Show','Talent Show','Awards Show'
+    { theme:'Prestige Drama', words:['Breaking Bad','The Sopranos','The Wire','Mad Men','Succession','Severance','The White Lotus','Euphoria','Big Little Lies','The Crown'] },
+    { theme:'Cult Favourites', words:['Game of Thrones','Stranger Things','Lost','The Bear','Fleabag','Killing Eve','Mare of Easttown','Line of Duty','Happy Valley','Peaky Blinders'] },
+    { theme:'British Classics', words:['Downton Abbey','Sherlock','Doctor Who','Black Mirror','The IT Crowd','Fleabag','Catastrophe','After Life','Derry Girls','The Office UK'] },
+    { theme:'Medical & Legal', words:['Greys Anatomy','House','ER','The Good Doctor','Chicago Med','Suits','The Good Fight','How to Get Away with Murder','Law and Order','Better Call Saul'] },
+    { theme:'Sitcoms', words:['The Office','Friends','Seinfeld','How I Met Your Mother','The Big Bang Theory','Parks and Recreation','Brooklyn Nine-Nine','Schitts Creek','The Good Place','New Girl'] },
+    { theme:'Teen & Coming of Age', words:['Gossip Girl','The OC','One Tree Hill','Riverdale','Heartbreak High','Sex Education','Elite','Pretty Little Liars','13 Reasons Why','The Summer I Turned Pretty'] },
+    { theme:'Lifestyle & Drama', words:['Sex and the City','Desperate Housewives','The Handmaids Tale','Bridgerton','Emily in Paris','The Morning Show','Selling Sunset','The Real Housewives','Below Deck','Real Housewives of Beverly Hills'] },
+    { theme:'Streaming Originals', words:['Ted Lasso','Stranger Things','The Witcher','Squid Game','Wednesday','Only Murders in the Building','Abbott Elementary','Hacks','Beef','The Diplomat'] },
+    { theme:'Animation', words:['The Simpsons','Family Guy','South Park','Rick and Morty','BoJack Horseman','Big Mouth','Archer','Futurama','Bob Burgers','King of the Hill'] },
+    { theme:'Reality TV', words:['Love is Blind','Too Hot to Handle','The Circle','The Bachelor','Married at First Sight','MasterChef','Australian Idol','Big Brother','The Amazing Race','Survivor'] },
+    { theme:'Streaming Platforms', words:['Netflix','Hulu','Disney+','HBO Max','Apple TV+','Amazon Prime Video','Paramount+','Peacock','Stan','Binge'] },
+    { theme:'TV Formats', words:['Reality TV','Dating Show','Cooking Show','Home Reno Show','True Crime Doc','Standup Special','Late Night Talk Show','Game Show','Talent Show','Awards Show'] },
   ],
   food: [
-    'Avocado Toast','Acai Bowl','Sourdough','Iced Coffee','Oat Milk Latte','Cold Brew','Bubble Tea','Boba','Matcha','Matcha Latte',
-    'Croffle','Cronut','Acai','Smoothie Bowl','Poke Bowl','Burrito Bowl','Grain Bowl','Buddha Bowl','Salad Bowl','Burger Bowl',
-    'Brunch','Bottomless Mimosas','Bottomless Brunch','Espresso Martini','Spritz','Aperol Spritz','Negroni','Old Fashioned','Mojito','Margarita',
-    'Vegan Burger','Beyond Burger','Impossible Burger','Plant Based','Meat Alternative','Almond Milk','Oat Milk','Soy Milk','Coconut Yoghurt','Vegan Cheese',
-    'Kale','Quinoa','Chia Pudding','Cauliflower Rice','Zucchini Noodles','Sweet Potato Toast','Hummus','Falafel','Halloumi','Beetroot',
-    'Sushi Burrito','Ramen','Pho','Pad Thai','Banh Mi','Bibimbap','Korean BBQ','Hot Pot','Dim Sum','Char Siu',
-    'Truffle Fries','Truffle Mac and Cheese','Truffle Oil','Truffle Everything','Foie Gras','Wagyu','A5 Wagyu','Dry Aged Steak','Bone Marrow','Tasting Menu',
-    'Cronut','Dalgona Coffee','Cloud Bread','TikTok Pasta','Feta Pasta','Viral Latte','Iced Matcha','Brown Sugar Boba','Strawberry Matcha','Dubai Chocolate',
-    'Air Fryer Chicken','Smashed Avo','Brinner','Brekkie','Brekky','Sanga','Snag','Pavlova','Lamington','Tim Tam'
+    { theme:'Cafe Favourites', words:['Avocado Toast','Sourdough','Iced Coffee','Oat Milk Latte','Cold Brew','Croffle','Cronut','Acai Bowl','Smoothie Bowl','Flat White'] },
+    { theme:'Bubble Tea & Matcha', words:['Bubble Tea','Boba','Matcha','Matcha Latte','Brown Sugar Boba','Strawberry Matcha','Iced Matcha','Hojicha','Taro Milk Tea','Cheese Foam Tea'] },
+    { theme:'Brunch Cocktails', words:['Espresso Martini','Aperol Spritz','Negroni','Old Fashioned','Mojito','Margarita','Bottomless Mimosas','Bloody Mary','Bellini','Mimosa'] },
+    { theme:'Plant Based', words:['Vegan Burger','Beyond Burger','Impossible Burger','Plant Based','Meat Alternative','Almond Milk','Oat Milk','Soy Milk','Coconut Yoghurt','Vegan Cheese'] },
+    { theme:'Healthy Bowls', words:['Poke Bowl','Burrito Bowl','Grain Bowl','Buddha Bowl','Salad Bowl','Burger Bowl','Acai Bowl','Quinoa Bowl','Noodle Bowl','Power Bowl'] },
+    { theme:'Healthy Ingredients', words:['Kale','Quinoa','Chia Pudding','Cauliflower Rice','Zucchini Noodles','Sweet Potato Toast','Beetroot','Spirulina','Kimchi','Sauerkraut'] },
+    { theme:'Asian Eats', words:['Sushi Burrito','Ramen','Pho','Pad Thai','Banh Mi','Bibimbap','Korean BBQ','Hot Pot','Dim Sum','Char Siu'] },
+    { theme:'Indulgent Foods', words:['Truffle Fries','Truffle Mac and Cheese','Truffle Oil','Foie Gras','Wagyu','A5 Wagyu','Dry Aged Steak','Bone Marrow','Tasting Menu','Caviar'] },
+    { theme:'Viral TikTok Food', words:['Dalgona Coffee','Cloud Bread','TikTok Pasta','Feta Pasta','Viral Latte','Dubai Chocolate','Crumbl Cookie','Baked Feta Pasta','Smashed Avo','Charcuterie Board'] },
+    { theme:'Aussie Slang Food', words:['Smashed Avo','Brinner','Brekkie','Brekky','Sanga','Snag','Pavlova','Lamington','Tim Tam','Chicken Parm'] },
+    { theme:'Mid East & Med', words:['Hummus','Falafel','Halloumi','Shawarma','Tabouleh','Babaganoush','Manakish','Zaatar','Pita','Labneh'] },
+    { theme:'Sweet Stuff', words:['Churros','Brownies','Donuts','Cupcakes','Macarons','Cheesecake','Cronut','Gelato','Affogato','Tres Leches'] },
   ],
   apps: [
-    'Instagram','TikTok','Snapchat','BeReal','Twitter','X','Threads','Bluesky','Mastodon','Reddit',
-    'WhatsApp','Telegram','Signal','iMessage','Discord','Slack','Teams','Zoom','Google Meet','FaceTime',
-    'Spotify','Apple Music','YouTube Music','SoundCloud','Bandcamp','Audible','Podcasts','Netflix','Disney+','Stan',
-    'Uber','Lyft','DiDi','Ola','Grab','Gojek','Bolt','DoorDash','Uber Eats','Menulog',
-    'Deliveroo','Just Eat','Foodora','EASI','HelloFresh','Uber Direct','Tasty','Yelp','Tripadvisor','Google Maps',
-    'Apple Maps','Waze','Citymapper','Moovit','Google Pay','Apple Pay','Samsung Wallet','Afterpay','Zip Pay','Klarna',
-    'Notion','Obsidian','Roam','Evernote','OneNote','Bear','Things','Todoist','TickTick','Trello',
-    'Strava','Nike Run Club','Fitbit','MyFitnessPal','Calm','Headspace','Insight Timer','Duolingo','Babbel','Busuu',
-    'Tinder','Bumble','Hinge','Grindr','Coffee Meets Bagel','The League','OkCupid','Match','eHarmony','Happn'
+    { theme:'Social Apps', words:['Instagram','TikTok','Snapchat','BeReal','Twitter','X','Threads','Bluesky','Mastodon','Reddit'] },
+    { theme:'Messaging Apps', words:['WhatsApp','Telegram','Signal','iMessage','Discord','Slack','Teams','Google Chat','GroupMe','Marco Polo'] },
+    { theme:'Music & Audio Apps', words:['Spotify','Apple Music','YouTube Music','SoundCloud','Bandcamp','Audible','Podcasts','Shazam','Pandora','Tidal'] },
+    { theme:'Streaming Apps', words:['Netflix','Disney+','Stan','Binge','Amazon Prime Video','Apple TV+','Hulu','Paramount+','HBO Max','Crunchyroll'] },
+    { theme:'Ride Share & Travel', words:['Uber','Lyft','DiDi','Ola','Grab','Gojek','Bolt','Citymapper','Moovit','Transit'] },
+    { theme:'Food Delivery', words:['DoorDash','Uber Eats','Menulog','Deliveroo','Just Eat','Foodora','EASI','HelloFresh','Marley Spoon','Tasty'] },
+    { theme:'Discovery & Maps', words:['Google Maps','Apple Maps','Waze','Citymapper','Moovit','Tripadvisor','Yelp','Foursquare','AllTrails','Komoot'] },
+    { theme:'Payments & Banking', words:['Google Pay','Apple Pay','Samsung Wallet','Afterpay','Zip Pay','Klarna','PayPal','CommBank','Up','Revolut'] },
+    { theme:'Productivity Apps', words:['Notion','Obsidian','Roam','Evernote','OneNote','Bear','Things','Todoist','TickTick','Trello'] },
+    { theme:'Health & Fitness', words:['Strava','Nike Run Club','Fitbit','MyFitnessPal','Calm','Headspace','Insight Timer','Duolingo','Babbel','Busuu'] },
+    { theme:'Dating Apps', words:['Tinder','Bumble','Hinge','Grindr','Coffee Meets Bagel','The League','OkCupid','Match','eHarmony','Happn'] },
+    { theme:'Gaming Apps', words:['Steam','Epic Games','Xbox App','PlayStation App','Nintendo Switch Online','Discord','Twitch','Roblox','Fortnite','Among Us'] },
   ],
 };
 
@@ -230,42 +265,56 @@ function shuffle(arr){
   return a;
 }
 function pluralize(n,word){ return n===1 ? word : word+'s'; }
-const CATEGORY_LABELS = {
-  random:'Mixed', brands:'Brand', tech:'Tech Gadget', slang:'Slang Term',
-  music:'Music Artist / Thing', tv:'TV Show', food:'Food / Drink', apps:'App',
-  custom:'Custom',
-};
-function makeHint(){
-  const label = CATEGORY_LABELS[STATE.category] || (STATE.category.charAt(0).toUpperCase()+STATE.category.slice(1));
-  let pool;
-  if(STATE.category === 'random'){
-    // pull from same pack the secret came from — but we don't track that.
-    // Best heuristic: union of all packs, exclude the secret.
-    const keys = Object.keys(PACKS).filter(k=>k!=='random');
-    pool = [];
-    keys.forEach(k=> pool.push(...PACKS[k]));
-  } else if(STATE.category === 'custom'){
-    pool = STATE.customCategory.split(',').map(s=>s.trim()).filter(Boolean);
-  } else {
-    pool = PACKS[STATE.category] || [];
-  }
-  // exclude the secret word (case-insensitive)
-  const w = (STATE.word||'').toLowerCase();
-  const candidates = pool.filter(x => x.toLowerCase() !== w);
-  const samples = shuffle(candidates).slice(0, 3);
-  return { label, samples };
-}
+// Return flat list of all words in the current pack.
 function chosenPack(){
   if(STATE.category === 'random'){
     const keys = Object.keys(PACKS).filter(k=>k!=='random');
     const merged = [];
-    keys.forEach(k=> merged.push(...PACKS[k]));
+    keys.forEach(k=> PACKS[k].forEach(g => merged.push(...g.words)));
     return merged;
   }
   if(STATE.category === 'custom'){
     return STATE.customCategory.split(',').map(s=>s.trim()).filter(Boolean);
   }
-  return PACKS[STATE.category] || [];
+  const groups = PACKS[STATE.category];
+  if(!groups) return [];
+  const merged = [];
+  groups.forEach(g => merged.push(...g.words));
+  return merged;
+}
+// Find the sub-group {theme, words} containing the secret word.
+// Random category searches across all packs. Returns null if not found.
+function findSecretGroup(){
+  const w = (STATE.word||'').toLowerCase();
+  if(!w) return null;
+  let packs;
+  if(STATE.category === 'random'){
+    packs = Object.keys(PACKS).filter(k=>k!=='random').map(k=>PACKS[k]);
+  } else if(STATE.category === 'custom'){
+    // Custom has no sub-groups; pretend the whole list is one group
+    const words = STATE.customCategory.split(',').map(s=>s.trim()).filter(Boolean);
+    if(words.some(x => x.toLowerCase() === w)) return { theme:'Custom List', words };
+    return null;
+  } else {
+    packs = [PACKS[STATE.category] || []];
+  }
+  for(const groups of packs){
+    for(const g of groups){
+      if(g.words.some(x => x.toLowerCase() === w)) return g;
+    }
+  }
+  return null;
+}
+// Build the imposter hint from the secret's sub-group.
+function makeHint(){
+  const group = findSecretGroup();
+  if(!group){
+    return { label:'Mixed', samples: [] };
+  }
+  const w = (STATE.word||'').toLowerCase();
+  const candidates = group.words.filter(x => x.toLowerCase() !== w);
+  const samples = shuffle(candidates).slice(0, 3);
+  return { label: group.theme, samples };
 }
 
 /* ---------- Screens ---------- */
@@ -377,8 +426,9 @@ function renderSetup(){
     app.appendChild(ta);
     app.appendChild(el('p',{class:'small muted'},['Need at least 2 words.']));
   } else if(STATE.category!=='random'){
-    const pack = PACKS[STATE.category] || [];
-    app.appendChild(el('p',{class:'small muted'},[pack.length+' '+pluralize(pack.length,'word')+' in this category.']));
+    const groups = PACKS[STATE.category] || [];
+    const wordCount = groups.reduce((n,g)=>n+g.words.length, 0);
+    app.appendChild(el('p',{class:'small muted'},[wordCount+' '+pluralize(wordCount,'word')+' across '+groups.length+' sub-themes.']));
   } else {
     app.appendChild(el('p',{class:'small muted'},['Pulls from all categories.']));
   }
