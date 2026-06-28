@@ -230,6 +230,31 @@ function shuffle(arr){
   return a;
 }
 function pluralize(n,word){ return n===1 ? word : word+'s'; }
+const CATEGORY_LABELS = {
+  random:'Mixed', brands:'Brand', tech:'Tech Gadget', slang:'Slang Term',
+  music:'Music Artist / Thing', tv:'TV Show', food:'Food / Drink', apps:'App',
+  custom:'Custom',
+};
+function makeHint(){
+  const label = CATEGORY_LABELS[STATE.category] || (STATE.category.charAt(0).toUpperCase()+STATE.category.slice(1));
+  let pool;
+  if(STATE.category === 'random'){
+    // pull from same pack the secret came from — but we don't track that.
+    // Best heuristic: union of all packs, exclude the secret.
+    const keys = Object.keys(PACKS).filter(k=>k!=='random');
+    pool = [];
+    keys.forEach(k=> pool.push(...PACKS[k]));
+  } else if(STATE.category === 'custom'){
+    pool = STATE.customCategory.split(',').map(s=>s.trim()).filter(Boolean);
+  } else {
+    pool = PACKS[STATE.category] || [];
+  }
+  // exclude the secret word (case-insensitive)
+  const w = (STATE.word||'').toLowerCase();
+  const candidates = pool.filter(x => x.toLowerCase() !== w);
+  const samples = shuffle(candidates).slice(0, 3);
+  return { label, samples };
+}
 function chosenPack(){
   if(STATE.category === 'random'){
     const keys = Object.keys(PACKS).filter(k=>k!=='random');
@@ -401,13 +426,12 @@ function renderReveal(){
   const total = STATE.players.length;
   const i = STATE.turnIndex;
   const name = STATE.players[i];
-  const isImp = STATE._imposters.includes(i);
 
   app.appendChild(el('h1',{},['Pass the phone']));
   app.appendChild(el('p',{},['Player '+(i+1)+' of '+total+' — '+name]));
 
   const screen = el('div',{class:'reveal-screen'},[
-    el('div',{class:'hand'},[isImp ? '🎭' : '👀']),
+    el('div',{class:'hand'},['🤫']),
     el('p',{class:'center muted'},['Tap "Reveal" when only '+name+' can see the screen.']),
     el('button',{class:'primary', onClick:revealWord},['Reveal']),
   ]);
@@ -427,8 +451,13 @@ function revealWord(){
 
   app.appendChild(el('h1',{},[name]));
   if(isImp){
+    const hint = makeHint();
     app.appendChild(el('div',{class:'secret imposter'},['YOU ARE THE IMPOSTER']));
-    app.appendChild(el('p',{class:'center muted'},["You don't know the word. Bluff. Spot the one who stumbles."]));
+    app.appendChild(el('p',{class:'center muted'},["You don't know the word. Bluff using the hint below."]));
+    app.appendChild(el('div',{class:'card', style:'text-align:center'},[
+      el('div',{class:'muted small'},['Topic: '+hint.label]),
+      el('div',{class:'huge', style:'font-size:20px; margin-top:6px'},[hint.samples.join('  ·  ')]),
+    ]));
   } else {
     app.appendChild(el('div',{class:'secret'},[STATE.word]));
     app.appendChild(el('p',{class:'center muted'},["Don't say the word. Hint at it without giving it away."]));
