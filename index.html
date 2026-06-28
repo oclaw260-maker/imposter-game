@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b0b0b">
+<title>Imposter — Pass & Play</title>
+<style>
+:root{
+  --bg:#0b0b0b; --card:#141414; --ink:#f3f3f3; --muted:#9a9a9a;
+  --accent:#ff4d4d; --good:#34d399; --line:#262626;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+  -webkit-tap-highlight-color:transparent;
+  overscroll-behavior:none;
+}
+.app{
+  min-height:100%; min-height:100dvh;
+  display:flex; flex-direction:column;
+  padding:max(env(safe-area-inset-top),16px) 16px max(env(safe-area-inset-bottom),16px);
+  max-width:560px; margin:0 auto;
+}
+h1{font-size:22px; margin:0 0 4px; letter-spacing:-.01em}
+h2{font-size:18px; margin:0 0 8px}
+p{margin:0 0 12px; color:var(--muted)}
+.row{display:flex; gap:8px}
+.row > *{flex:1}
+button{
+  font:inherit; color:var(--ink); background:var(--card);
+  border:1px solid var(--line); border-radius:12px; padding:14px 12px;
+  cursor:pointer; transition:transform .08s ease, background .15s ease;
+  -webkit-user-select:none; user-select:none;
+}
+button:active{transform:scale(.98)}
+button.primary{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600}
+button.ghost{background:transparent}
+input,select{
+  font:inherit; width:100%; color:var(--ink); background:#1c1c1c;
+  border:1px solid var(--line); border-radius:12px; padding:14px 12px;
+}
+input:focus,select:focus,button:focus{outline:2px solid var(--accent); outline-offset:2px}
+label{font-size:13px; color:var(--muted); display:block; margin:12px 0 6px}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:16px;
+  padding:16px; margin-bottom:12px;
+}
+.pill{
+  display:inline-block; padding:4px 10px; border-radius:999px;
+  background:#1c1c1c; border:1px solid var(--line); font-size:12px; color:var(--muted);
+  margin-right:6px; margin-top:4px;
+}
+.tabs{display:flex; gap:6px; margin-bottom:12px}
+.tabs button{flex:1; padding:10px; font-size:14px}
+.tabs button.active{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600}
+.list{display:flex; flex-direction:column; gap:6px; max-height:42vh; overflow:auto; padding-right:4px}
+.list .item{
+  display:flex; align-items:center; gap:8px; padding:10px 12px;
+  background:#1c1c1c; border:1px solid var(--line); border-radius:10px;
+}
+.list .item .name{flex:1}
+.list .item .x{
+  border:none; background:transparent; color:var(--muted);
+  font-size:18px; padding:4px 8px;
+}
+.list .item .x:active{color:var(--accent)}
+.huge{
+  font-size:42px; font-weight:700; letter-spacing:-.02em; text-align:center;
+  margin:8px 0 4px;
+}
+.center{text-align:center}
+.secret{
+  font-size:28px; font-weight:700; text-align:center; letter-spacing:.02em;
+  padding:28px 12px; background:#1c1c1c; border:1px dashed var(--line);
+  border-radius:14px; margin:14px 0;
+}
+.secret.imposter{color:var(--accent); border-color:var(--accent)}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.hr{height:1px; background:var(--line); margin:12px 0; border:0}
+.kbd{font-family:ui-monospace,Menlo,monospace; font-size:12px; color:var(--muted)}
+.tag-row{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+.tag{
+  font-size:12px; padding:6px 10px; border-radius:999px;
+  background:#1c1c1c; border:1px solid var(--line); color:var(--muted);
+  cursor:pointer;
+}
+.tag.on{background:var(--accent); border-color:var(--accent); color:#fff}
+.reveal-screen{min-height:60vh; display:flex; flex-direction:column; justify-content:center}
+.hand{font-size:80px; text-align:center; margin:8px 0}
+.bottom-actions{margin-top:auto; display:flex; flex-direction:column; gap:8px}
+.toggle{display:flex; align-items:center; justify-content:space-between; padding:10px 0}
+.toggle input{width:auto}
+.spacer{height:8px}
+.note{font-size:12px; color:var(--muted); text-align:center; margin-top:6px}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+/* ---------- State ---------- */
+const STATE = {
+  screen: 'home',          // home | setup | categories | reveal | play | end
+  players: ['Player 1'],   // names
+  imposters: 1,
+  category: 'random',
+  customCategory: '',
+  word: '',
+  turnIndex: 0,
+  history: [],             // [{word, imposter, players}]
+};
+
+const STORAGE_KEY = 'imposter-v1';
+
+/* ---------- Word Packs ---------- */
+const PACKS = {
+  random: null, // random across all
+  animals: [
+    'Dog','Cat','Horse','Cow','Pig','Sheep','Goat','Chicken','Duck','Goose',
+    'Rabbit','Mouse','Lion','Tiger','Bear','Wolf','Fox','Elephant','Giraffe','Zebra',
+    'Kangaroo','Koala','Panda','Monkey','Crocodile','Shark','Whale','Dolphin','Eagle','Owl',
+    'Penguin','Frog','Turtle','Snail','Butterfly','Spider','Scorpion','Ant','Bee','Wasp',
+    'Camel','Donkey','Deer','Moose','Hippopotamus','Rhino','Leopard','Cheetah','Hyena','Gorilla',
+    'Chimpanzee','Lobster','Crab','Octopus','Squid','Seal','Otter','Beaver','Squirrel','Hedgehog',
+    'Bat','Parrot','Flamingo','Peacock','Swan','Turkey','Pigeon','Crow','Hawk','Falcon',
+    'Salmon','Trout','Goldfish','Shrimp','Oyster','Clam','Starfish','Jellyfish','Snake','Lizard',
+    'Gecko','Iguana','Cobra','Viper','Boa','Alligator','Caiman','Mole','Rat','Hamster',
+    'Guinea Pig','Ferret','Skunk','Raccoon','Possum','Porcupine','Platypus','Wombat','Lemur','Sloth'
+  ],
+  food: [
+    'Pizza','Burger','Hot Dog','Sushi','Taco','Pasta','Spaghetti','Lasagna','Risotto','Ramen',
+    'Pho','Curry','Biryani','Tacos','Burrito','Nachos','Quesadilla','Steak','Bacon','Sausage',
+    'Eggs','Omelette','Pancakes','Waffles','Toast','Cereal','Oatmeal','Yogurt','Bagel','Croissant',
+    'Donut','Muffin','Cupcake','Cake','Cheesecake','Pie','Brownie','Cookie','Ice Cream','Sorbet',
+    'Pudding','Custard','Chocolate','Candy','Lollipop','Marshmallow','Popcorn','Chips','Crackers','Pretzel',
+    'Apple','Banana','Orange','Grape','Strawberry','Blueberry','Raspberry','Watermelon','Pineapple','Mango',
+    'Peach','Pear','Plum','Cherry','Lemon','Lime','Grapefruit','Kiwi','Coconut','Avocado',
+    'Tomato','Cucumber','Lettuce','Spinach','Carrot','Potato','Onion','Garlic','Broccoli','Cauliflower',
+    'Pepper','Mushroom','Corn','Peas','Beans','Rice','Bread','Cheese','Butter','Milk',
+    'Coffee','Tea','Juice','Soda','Water','Beer','Wine','Cocktail','Lemonade','Smoothie'
+  ],
+  places: [
+    'Beach','Mountain','Forest','Desert','Jungle','Island','Cave','Volcano','Waterfall','Lake',
+    'River','Ocean','Pond','Swamp','Meadow','Valley','Cliff','Canyon','Glacier','Reef',
+    'Library','Museum','School','Hospital','Bank','Post Office','Police Station','Fire Station','Theatre','Cinema',
+    'Restaurant','Cafe','Bakery','Bar','Pub','Club','Gym','Pool','Park','Zoo',
+    'Stadium','Arena','Mall','Market','Supermarket','Pharmacy','Bookstore','Library','Church','Temple',
+    'Mosque','Cemetery','Castle','Palace','Monument','Statue','Bridge','Tunnel','Airport','Train Station',
+    'Bus Stop','Subway','Harbor','Marina','Lighthouse','Pier','Dock','Farm','Barn','Greenhouse',
+    'Office','Factory','Warehouse','Laboratory','Studio','Workshop','Garage','Parking Lot','Playground','Skate Park',
+    'Tokyo','Paris','New York','London','Sydney','Cairo','Mumbai','Rio','Moscow','Toronto',
+    'Space Station','Submarine','Pirate Ship','Treehouse','Igloo','Tent','Cabin','Mansion','Apartment','Hotel'
+  ],
+  objects: [
+    'Phone','Laptop','Tablet','Monitor','Keyboard','Mouse','Printer','Camera','Headphones','Speaker',
+    'Television','Remote','Charger','Cable','Adapter','Battery','Flashlight','Lamp','Clock','Watch',
+    'Wallet','Purse','Keys','Sunglasses','Glasses','Hat','Scarf','Gloves','Umbrella','Backpack',
+    'Suitcase','Bottle','Cup','Mug','Plate','Bowl','Fork','Knife','Spoon','Napkin',
+    'Toothbrush','Toothpaste','Soap','Towel','Comb','Hairbrush','Mirror','Scissors','Razor','Shampoo',
+    'Pen','Pencil','Marker','Notebook','Stapler','Tape','Glue','Ruler','Calculator','Eraser',
+    'Book','Magazine','Newspaper','Envelope','Stamp','Letter','Card','Gift','Balloon','Candle',
+    'Pillow','Blanket','Sheet','Mattress','Bed','Chair','Table','Sofa','Desk','Shelf',
+    'Hammer','Screwdriver','Wrench','Drill','Saw','Nails','Screws','Tape Measure','Level','Pliers',
+    'Broom','Mop','Bucket','Sponge','Detergent','Vacuum','Trash Can','Iron','Laundry Basket','Drying Rack',
+    'Ball','Racket','Bat','Helmet','Bicycle','Skateboard','Scooter','Tennis','Football','Basketball'
+  ],
+  movies: [
+    'Star Wars','Jurassic Park','Titanic','The Matrix','Avatar','Forrest Gump','The Godfather','Pulp Fiction',
+    'Inception','The Dark Knight','Gladiator','Braveheart','Rocky','Casablanca','Gone with the Wind',
+    'E.T.','Jaws','Frozen','Toy Story','Finding Nemo','Shrek','The Lion King','Up','Coco','Moana',
+    'Harry Potter','Lord of the Rings','Indiana Jones','Pirates of the Caribbean','Back to the Future',
+    'The Avengers','Iron Man','Spider-Man','Batman','Superman','Wonder Woman','Black Panther','Doctor Strange',
+    'Guardians of the Galaxy','Thor','Captain America','Deadpool','Logan','Joker','Frozen','Tangled',
+    'Cinderella','Snow White','Sleeping Beauty','Beauty and the Beast','Aladdin','The Little Mermaid','Mulan',
+    'The Incredibles','Monsters Inc','WALL-E','Ratatouille','Cars','Inside Out','Soul','Encanto',
+    'Top Gun','Mission Impossible','James Bond','Die Hard','Terminator','Predator','Aliens',
+    'The Notebook','Pretty Woman','La La Land','Grease','Dirty Dancing','Mamma Mia','The Sound of Music',
+    'Home Alone','Elf','The Hangover','Bridesmaids','Step Brothers','Anchorman','Mean Girls','Clueless'
+  ],
+};
+
+/* ---------- Persistence ---------- */
+function save(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }catch{}
+}
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    Object.assign(STATE, s);
+  }catch{}
+}
+
+/* ---------- Helpers ---------- */
+function $(sel, root=document){ return root.querySelector(sel); }
+function el(tag, attrs={}, children=[]){
+  const e = document.createElement(tag);
+  for(const k in attrs){
+    if(k==='class') e.className = attrs[k];
+    else if(k==='style') e.style.cssText = attrs[k];
+    else if(k.startsWith('on') && typeof attrs[k]==='function') e.addEventListener(k.slice(2), attrs[k]);
+    else if(attrs[k]===true) e.setAttribute(k,'');
+    else if(attrs[k]!==false && attrs[k]!=null) e.setAttribute(k, attrs[k]);
+  }
+  (Array.isArray(children)?children:[children]).forEach(c=>{
+    if(c==null||c===false) return;
+    if(typeof c==='string'||typeof c==='number') e.appendChild(document.createTextNode(c));
+    else e.appendChild(c);
+  });
+  return e;
+}
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+function pluralize(n,word){ return n===1 ? word : word+'s'; }
+function chosenPack(){
+  if(STATE.category === 'random'){
+    const keys = Object.keys(PACKS).filter(k=>k!=='random');
+    const merged = [];
+    keys.forEach(k=> merged.push(...PACKS[k]));
+    return merged;
+  }
+  if(STATE.category === 'custom'){
+    return STATE.customCategory.split(',').map(s=>s.trim()).filter(Boolean);
+  }
+  return PACKS[STATE.category] || [];
+}
+
+/* ---------- Screens ---------- */
+function renderHome(){
+  const app = $('#app'); app.innerHTML='';
+  app.appendChild(el('h1',{},['Imposter']));
+  app.appendChild(el('p',{},['Pass the phone around. Most see the secret word — one (or more) sees nothing. Spot the odd one out.']));
+
+  const start = el('button',{class:'primary', onClick:()=>{ STATE.screen='setup'; render(); }},['Play']);
+  const history = el('button',{class:'ghost', onClick:showHistory},['History ('+STATE.history.length+')']);
+  const reset   = el('button',{class:'ghost', onClick:()=>{
+    if(STATE.history.length===0) return;
+    if(confirm('Clear all history?')){ STATE.history=[]; save(); render(); }
+  }},['Reset history']);
+
+  const card = el('div',{class:'card'},[
+    el('div',{class:'row'},[start]),
+    el('div',{class:'spacer'}),
+    el('div',{class:'row'},[history, reset]),
+  ]);
+  app.appendChild(card);
+
+  app.appendChild(el('p',{class:'small muted'},[
+    'How it works: setup players → pick a category → pass the phone, each player taps to reveal & hide → discuss → vote.',
+  ]));
+}
+
+function renderSetup(){
+  const app = $('#app'); app.innerHTML='';
+  app.appendChild(el('h1',{},['Setup']));
+
+  // Players list
+  const list = el('div',{class:'list'});
+  function refreshList(){
+    list.innerHTML='';
+    STATE.players.forEach((name,i)=>{
+      const item = el('div',{class:'item'},[
+        el('span',{class:'name'},[name||'(unnamed)']),
+        el('button',{class:'x', title:'Remove', onClick:()=>{
+          if(STATE.players.length<=1) return;
+          STATE.players.splice(i,1); save(); refreshList();
+        }},['×']),
+      ]);
+      list.appendChild(item);
+    });
+  }
+  refreshList();
+  app.appendChild(el('label',{},['Players ('+STATE.players.length+')']));
+  app.appendChild(list);
+
+  const nameInput = el('input',{type:'text', placeholder:'Add player name', maxlength:'24'});
+  const addBtn = el('button',{class:'ghost', onClick:()=>{
+    const v = nameInput.value.trim();
+    if(!v) return;
+    STATE.players.push(v); nameInput.value=''; save(); refreshList();
+    // update label count
+    $('label', app).textContent = 'Players ('+STATE.players.length+')';
+  }},['Add']);
+  app.appendChild(el('div',{class:'row', style:'margin-top:8px'},[
+    nameInput, addBtn,
+  ]));
+
+  app.appendChild(el('hr',{class:'hr'}));
+
+  // Imposters
+  app.appendChild(el('label',{},['Number of imposters']));
+  const impRow = el('div',{class:'row'});
+  const maxImp = Math.max(1, Math.floor(STATE.players.length/2));
+  function renderImp(){
+    impRow.innerHTML='';
+    for(let i=1;i<=maxImp;i++){
+      const b = el('button',{ class: STATE.imposters===i ? 'primary':'', onClick:()=>{
+        STATE.imposters=i; save(); renderImp();
+      }},[String(i)]);
+      impRow.appendChild(b);
+    }
+  }
+  renderImp();
+  app.appendChild(impRow);
+
+  app.appendChild(el('hr',{class:'hr'}));
+
+  // Category
+  app.appendChild(el('label',{},['Category']));
+  const tabRow = el('div',{class:'tabs'});
+  const cats = [
+    ['random','Random'],
+    ['animals','Animals'],
+    ['food','Food'],
+    ['places','Places'],
+    ['objects','Objects'],
+    ['movies','Movies'],
+    ['custom','Custom'],
+  ];
+  cats.forEach(([k,label])=>{
+    const b = el('button',{ class: STATE.category===k ? 'active':'', onClick:()=>{
+      STATE.category=k; save(); renderSetup();
+    }},[label]);
+    tabRow.appendChild(b);
+  });
+  app.appendChild(tabRow);
+
+  if(STATE.category==='custom'){
+    app.appendChild(el('label',{},['Your words (comma separated)']));
+    const ta = el('input',{type:'text', placeholder:'e.g. Surfboard, Espresso, Telescope', value:STATE.customCategory});
+    ta.addEventListener('input', e=>{ STATE.customCategory=e.target.value; save(); });
+    app.appendChild(ta);
+    app.appendChild(el('p',{class:'small muted'},['Need at least 2 words.']));
+  } else if(STATE.category!=='random'){
+    const pack = PACKS[STATE.category] || [];
+    app.appendChild(el('p',{class:'small muted'},[pack.length+' '+pluralize(pack.length,'word')+' in this category.']));
+  } else {
+    app.appendChild(el('p',{class:'small muted'},['Pulls from all categories.']));
+  }
+
+  app.appendChild(el('hr',{class:'hr'}));
+
+  // Actions
+  const back = el('button',{class:'ghost', onClick:()=>{ STATE.screen='home'; render(); }},['← Back']);
+  const go = el('button',{class:'primary', onClick:startGame, disabled:false},['Start →']);
+  // disable if custom has <2
+  if(STATE.category==='custom'){
+    const arr = STATE.customCategory.split(',').map(s=>s.trim()).filter(Boolean);
+    if(arr.length<2){
+      go.classList.remove('primary');
+      go.setAttribute('disabled','');
+    }
+  }
+  app.appendChild(el('div',{class:'row'},[back, go]));
+
+  // Save player names on blur too (in case user only types in input + add)
+  // (already handled in addBtn)
+}
+
+function startGame(){
+  if(STATE.players.length < 2){ alert('Need at least 2 players.'); return; }
+  const pack = chosenPack();
+  if(pack.length < 2){ alert('Pick a category with at least 2 words.'); return; }
+  // pick word
+  let w = pick(pack);
+  while(STATE.history.length && STATE.history[STATE.history.length-1].word === w && pack.length>1){
+    w = pick(pack); // avoid same word twice in a row
+  }
+  STATE.word = w;
+  // assign imposter indices
+  const indices = shuffle(STATE.players.map((_,i)=>i)).slice(0, STATE.imposters);
+  STATE._imposters = indices;
+  STATE.turnIndex = 0;
+  STATE.screen = 'reveal';
+  save();
+  render();
+}
+
+function renderReveal(){
+  const app = $('#app'); app.innerHTML='';
+  const total = STATE.players.length;
+  const i = STATE.turnIndex;
+  const name = STATE.players[i];
+  const isImp = STATE._imposters.includes(i);
+
+  app.appendChild(el('h1',{},['Pass the phone']));
+  app.appendChild(el('p',{},['Player '+(i+1)+' of '+total+' — '+name]));
+
+  const screen = el('div',{class:'reveal-screen'},[
+    el('div',{class:'hand'},[isImp ? '🎭' : '👀']),
+    el('p',{class:'center muted'},['Tap "Reveal" when only '+name+' can see the screen.']),
+    el('button',{class:'primary', onClick:revealWord},['Reveal']),
+  ]);
+  app.appendChild(screen);
+
+  const back = el('button',{class:'ghost', onClick:()=>{
+    if(confirm('Abandon this round?')){ STATE.screen='setup'; render(); }
+  }},['Abandon round']);
+  app.appendChild(el('div',{class:'bottom-actions'},[back]));
+}
+
+function revealWord(){
+  const app = $('#app'); app.innerHTML='';
+  const i = STATE.turnIndex;
+  const isImp = STATE._imposters.includes(i);
+  const name = STATE.players[i];
+
+  app.appendChild(el('h1',{},[name]));
+  if(isImp){
+    app.appendChild(el('div',{class:'secret imposter'},['YOU ARE THE IMPOSTER']));
+    app.appendChild(el('p',{class:'center muted'},["You don't know the word. Bluff. Spot the one who stumbles."]));
+  } else {
+    app.appendChild(el('div',{class:'secret'},[STATE.word]));
+    app.appendChild(el('p',{class:'center muted'},["Don't say the word. Hint at it without giving it away."]));
+  }
+
+  const hide = el('button',{class:'primary', onClick:()=>{
+    STATE.turnIndex++;
+    if(STATE.turnIndex >= STATE.players.length){
+      STATE.screen = 'play';
+      STATE.history.push({
+        word: STATE.word,
+        imposter: STATE._imposters.map(idx => STATE.players[idx]),
+        players: STATE.players.slice(),
+      });
+      save();
+      render();
+    } else {
+      render();
+    }
+  }},['Hide & pass']);
+  app.appendChild(el('div',{class:'bottom-actions'},[hide]));
+  app.appendChild(el('p',{class:'note'},['Screen is yours alone until you tap "Hide & pass".']));
+}
+
+function renderPlay(){
+  const app = $('#app'); app.innerHTML='';
+  app.appendChild(el('h1',{},['Round in play']));
+  app.appendChild(el('p',{},['Everyone has seen their role. Now talk it out, give clues, and vote out the imposter.']));
+
+  // Reminder of word for host (hidden-style)
+  const card = el('div',{class:'card'},[
+    el('h2',{},['Round summary']),
+    el('div',{class:'muted small'},['Secret word']),
+    el('div',{class:'huge'},[STATE.word]),
+    el('hr',{class:'hr'}),
+    el('div',{class:'muted small'},['Imposter'+(STATE._imposters.length>1?'s':'')]),
+    el('div',{class:'tag-row'}, STATE._imposters.map(idx =>
+      el('span',{class:'tag on'},[STATE.players[idx]])
+    )),
+  ]);
+  app.appendChild(card);
+
+  const reveal = el('button',{class:'primary', onClick:()=>{ STATE.screen='end'; render(); }},['Reveal imposter']);
+  const newRound = el('button',{class:'ghost', onClick:()=>{ STATE.screen='setup'; render(); }},['New round']);
+  app.appendChild(el('div',{class:'row'},[reveal, newRound]));
+}
+
+function renderEnd(){
+  const app = $('#app'); app.innerHTML='';
+  app.appendChild(el('h1',{},['Reveal']));
+  app.appendChild(el('div',{class:'center', style:'font-size:64px'},['🎭']));
+  const imps = STATE._imposters.map(idx => STATE.players[idx]).join(', ');
+  app.appendChild(el('h2',{class:'center'},['The imposter'+(STATE._imposters.length>1?'s':'')+' '+imps]));
+  app.appendChild(el('div',{class:'card'},[
+    el('div',{class:'muted small'},['Secret word']),
+    el('div',{class:'huge'},[STATE.word]),
+  ]));
+
+  const playAgain = el('button',{class:'primary', onClick:startGame},['Play again (same setup)']);
+  const setup = el('button',{class:'ghost', onClick:()=>{ STATE.screen='setup'; render(); }},['Back to setup']);
+  const home = el('button',{class:'ghost', onClick:()=>{ STATE.screen='home'; render(); }},['Home']);
+  app.appendChild(el('div',{class:'row'},[playAgain, setup]));
+  app.appendChild(el('div',{class:'spacer'}));
+  app.appendChild(home);
+}
+
+function showHistory(){
+  const app = $('#app'); app.innerHTML='';
+  app.appendChild(el('h1',{},['History']));
+  if(STATE.history.length===0){
+    app.appendChild(el('p',{},['No rounds played yet.']));
+  } else {
+    STATE.history.slice().reverse().forEach((h,idx)=>{
+      app.appendChild(el('div',{class:'card'},[
+        el('div',{class:'muted small'},['Round '+(STATE.history.length-idx)]),
+        el('div',{class:'huge', style:'font-size:24px; text-align:left'},[h.word]),
+        el('div',{class:'tag-row'},[
+          ...h.players.map((p,i)=>{
+            const wasImp = h.imposter.includes(p);
+            return el('span',{class:'tag'+(wasImp?' on':'')},[p+(wasImp?' (imposter)':'')]);
+          })
+        ]),
+      ]));
+    });
+  }
+  const back = el('button',{class:'ghost', onClick:()=>{ STATE.screen='home'; render(); }},['← Back']);
+  app.appendChild(back);
+}
+
+/* ---------- Router ---------- */
+function render(){
+  switch(STATE.screen){
+    case 'home': renderHome(); break;
+    case 'setup': renderSetup(); break;
+    case 'reveal': renderReveal(); break;
+    case 'play': renderPlay(); break;
+    case 'end': renderEnd(); break;
+    default: STATE.screen='home'; renderHome();
+  }
+}
+
+/* ---------- Boot ---------- */
+load();
+// migrate players if empty
+if(!STATE.players || !STATE.players.length) STATE.players=['Player 1'];
+render();
+
+// Prevent accidental horizontal scroll
+document.addEventListener('touchmove', e=>{
+  if(e.scale && e.scale!==1) e.preventDefault();
+},{passive:false});
+</script>
+</body>
+</html>
