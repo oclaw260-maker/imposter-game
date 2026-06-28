@@ -119,67 +119,75 @@ const STORAGE_KEY = 'imposter-v1';
 /* ---------- Word Packs ---------- */
 const PACKS = {
   random: null, // random across all
-  animals: [
-    'Dog','Cat','Horse','Cow','Pig','Sheep','Goat','Chicken','Duck','Goose',
-    'Rabbit','Mouse','Lion','Tiger','Bear','Wolf','Fox','Elephant','Giraffe','Zebra',
-    'Kangaroo','Koala','Panda','Monkey','Crocodile','Shark','Whale','Dolphin','Eagle','Owl',
-    'Penguin','Frog','Turtle','Snail','Butterfly','Spider','Scorpion','Ant','Bee','Wasp',
-    'Camel','Donkey','Deer','Moose','Hippopotamus','Rhino','Leopard','Cheetah','Hyena','Gorilla',
-    'Chimpanzee','Lobster','Crab','Octopus','Squid','Seal','Otter','Beaver','Squirrel','Hedgehog',
-    'Bat','Parrot','Flamingo','Peacock','Swan','Turkey','Pigeon','Crow','Hawk','Falcon',
-    'Salmon','Trout','Goldfish','Shrimp','Oyster','Clam','Starfish','Jellyfish','Snake','Lizard',
-    'Gecko','Iguana','Cobra','Viper','Boa','Alligator','Caiman','Mole','Rat','Hamster',
-    'Guinea Pig','Ferret','Skunk','Raccoon','Possum','Porcupine','Platypus','Wombat','Lemur','Sloth'
+  brands: [
+    'Apple','Google','Nike','Adidas','Samsung','Spotify','Netflix','Disney','Tesla','Amazon',
+    'Uber','Airbnb','Instagram','TikTok','YouTube','Twitter','Facebook','WhatsApp','Snapchat','Reddit',
+    'Pinterest','Twitch','Discord','Slack','Zoom','Microsoft','Sony','Nintendo','Xbox','PlayStation',
+    'Starbucks','Coca-Cola','Pepsi','Red Bull','Monster','Heineken','Guinness','Corona','Patagonia','Uniqlo',
+    'H&M','Zara','IKEA','Westfield','Myer','David Jones','Kmart','Target','Woolworths','Coles',
+    'Aldi','Costco','Whole Foods','Trader Joes','Chipotle','Subway','McDonalds','KFC','Dominos','Nandos',
+    'Glossier','Lululemon','Sephora','Beats','Dyson','GoPro','Canon','Polaroid','Lego',
+    'Marvel','DC','Pixar','HBO','Hulu','Prime Video','Paramount','Warner Bros','Universal','LEGO'
+  ],
+  tech: [
+    'Smartphone','Laptop','Tablet','Smartwatch','AirPods','VR Headset','Drone','E-Reader','Game Console','Streaming Stick',
+    'Bluetooth Speaker','Noise Cancelling Headphones','Mechanical Keyboard','Wireless Mouse','Webcam','Ring Light','Standing Desk','Ergonomic Chair','Monitor','USB-C Hub',
+    'Hard Drive','SSD','Power Bank','Wireless Charger','Smart Plug','Robot Vacuum','Smart Thermostat','Doorbell Camera','Smoke Alarm','Light Bulb',
+    'Electric Toothbrush','Hair Straightener','Hair Dryer','Electric Kettle','Air Fryer','Instant Pot','Espresso Machine','Blender','Coffee Grinder','Milk Frother',
+    'Streaming Service','VPN','Cloud Storage','Password Manager','Smart Speaker','Dash Cam','GPS Tracker','Fitness Tracker','Sleep Tracker','Smart Scale',
+    '3D Printer','Laser Cutter','Soldering Iron','Raspberry Pi','Arduino','Mechanical Pencil','Notion App','Slack Channel','Zoom Call','Google Doc'
+  ],
+  slang: [
+    'Slay','No Cap','Bussin','Mid','Rizz','Sigma','Gyatt','Skibidi','Fanum Tax','Ohio',
+    'Bet','Lowkey','Highkey','Slaps','Fire','GOAT','Sus','Drip','Vibe','Mood',
+    'Ghosting','Cushioning','Orbiting','Catfishing','Love Bombing','Gaslighting','Breadcrumbing','Situationship','Soft Launch','Hard Launch',
+    'Adulting','Girlboss','Girl Dinner','Hot Girl Walk','Lazy Girl Job','Quiet Quitting','Quiet Firing','Resentee','Bare Minimum Monday','Girl Math',
+    'Brat','Demure','Very Mindful Very Demure','Ick','ick list','ICK','ick factor','ick','main character','main character energy',
+    'Pick Me','Pick Me Girl','Pick Me Boy','Therapy Speak','Trauma Dump','Corecore','Weird Girl','Ferry Girl','That Girl','Cozy Girl',
+    'Goblin Mode','Bed Rotting','Doomscrolling','Touch Grass','Take the L','Catch These Hands','Its Giving','Serving','Serving Looks','Period',
+    'Hits Different','Understood the Assignment','The Vibes','Vibe Check','Big Mood','Iconic','Legend','Legendary','Slay Queen','Bestie'
+  ],
+  music: [
+    'Taylor Swift','Beyoncé','Drake','Rihanna','Adele','Ed Sheeran','Billie Eilish','Olivia Rodrigo','Dua Lipa','Harry Styles',
+    'The Weeknd','Bad Bunny','Kendrick Lamar','Travis Scott','Post Malone','Cardi B','Megan Thee Stallion','Lizzo','Doja Cat','SZA',
+    'Lana Del Rey','Arctic Monkeys','Tame Impala','Daft Punk','The Strokes','Florence and the Machine','Lorde','Halsey','Imagine Dragons','Maroon 5',
+    'Coldplay','Muse','Radiohead','Foo Fighters','Green Day','Blink-182','Sum 41','My Chemical Romance','Panic at the Disco','Fall Out Boy',
+    'Jay-Z','Kanye West','Eminem','Snoop Dogg','Outkast','Khalid','Anderson .Paak','Frank Ocean','Tyler the Creator','Childish Gambino',
+    'Spotify Wrapped','Vinyl Record','Cassette Tape','Walkman','Discman','iPod','MP3 Player','Boombox','Mixtape','Playlist',
+    'Coachella','Glastonbury','Splendour in the Grass','Laneway Festival','Reading Festival','SXSW','Bonnaroo','Lollapalooza','Primavera Sound','Tomorrowland',
+    'Spotify','Apple Music','Tidal','SoundCloud','Bandcamp','YouTube Music','Pandora','Last.fm','Deezer','Amazon Music'
+  ],
+  tv: [
+    'Breaking Bad','Game of Thrones','Stranger Things','The Office','Friends','Seinfeld','The Sopranos','The Wire','Mad Men','Lost',
+    'Succession','Ted Lasso','The Bear','Severance','The White Lotus','Euphoria','Fleabag','Killing Eve','Big Little Lies','The Crown',
+    'Downton Abbey','Peaky Blinders','Sherlock','Doctor Who','Black Mirror','True Detective','The Night Manager','Line of Duty','Happy Valley','Mare of Easttown',
+    'Greys Anatomy','How I Met Your Mother','The Big Bang Theory','Parks and Recreation','Brooklyn Nine-Nine','Schitts Creek','The Good Place','New Girl','Gossip Girl','The OC',
+    'Sex and the City','Desperate Housewives','The Handmaids Tale','Bridgerton','Emily in Paris','The Morning Show','Ted Lasso','Only Murders in the Building','Abbott Elementary','Hacks',
+    'The Simpsons','Family Guy','South Park','Rick and Morty','BoJack Horseman','Big Mouth','Love is Blind','Too Hot to Handle','The Circle','Squid Game',
+    'Netflix','Hulu','Disney+','HBO Max','Apple TV+','Amazon Prime Video','Paramount+','Peacock','Stan','Binge',
+    'Reality TV','Dating Show','Cooking Show','Home Reno Show','True Crime Doc','Standup Special','Late Night Talk Show','Game Show','Talent Show','Awards Show'
   ],
   food: [
-    'Pizza','Burger','Hot Dog','Sushi','Taco','Pasta','Spaghetti','Lasagna','Risotto','Ramen',
-    'Pho','Curry','Biryani','Tacos','Burrito','Nachos','Quesadilla','Steak','Bacon','Sausage',
-    'Eggs','Omelette','Pancakes','Waffles','Toast','Cereal','Oatmeal','Yogurt','Bagel','Croissant',
-    'Donut','Muffin','Cupcake','Cake','Cheesecake','Pie','Brownie','Cookie','Ice Cream','Sorbet',
-    'Pudding','Custard','Chocolate','Candy','Lollipop','Marshmallow','Popcorn','Chips','Crackers','Pretzel',
-    'Apple','Banana','Orange','Grape','Strawberry','Blueberry','Raspberry','Watermelon','Pineapple','Mango',
-    'Peach','Pear','Plum','Cherry','Lemon','Lime','Grapefruit','Kiwi','Coconut','Avocado',
-    'Tomato','Cucumber','Lettuce','Spinach','Carrot','Potato','Onion','Garlic','Broccoli','Cauliflower',
-    'Pepper','Mushroom','Corn','Peas','Beans','Rice','Bread','Cheese','Butter','Milk',
-    'Coffee','Tea','Juice','Soda','Water','Beer','Wine','Cocktail','Lemonade','Smoothie'
+    'Avocado Toast','Acai Bowl','Sourdough','Iced Coffee','Oat Milk Latte','Cold Brew','Bubble Tea','Boba','Matcha','Matcha Latte',
+    'Croffle','Cronut','Acai','Smoothie Bowl','Poke Bowl','Burrito Bowl','Grain Bowl','Buddha Bowl','Salad Bowl','Burger Bowl',
+    'Brunch','Bottomless Mimosas','Bottomless Brunch','Espresso Martini','Spritz','Aperol Spritz','Negroni','Old Fashioned','Mojito','Margarita',
+    'Vegan Burger','Beyond Burger','Impossible Burger','Plant Based','Meat Alternative','Almond Milk','Oat Milk','Soy Milk','Coconut Yoghurt','Vegan Cheese',
+    'Kale','Quinoa','Chia Pudding','Cauliflower Rice','Zucchini Noodles','Sweet Potato Toast','Hummus','Falafel','Halloumi','Beetroot',
+    'Sushi Burrito','Ramen','Pho','Pad Thai','Banh Mi','Bibimbap','Korean BBQ','Hot Pot','Dim Sum','Char Siu',
+    'Truffle Fries','Truffle Mac and Cheese','Truffle Oil','Truffle Everything','Foie Gras','Wagyu','A5 Wagyu','Dry Aged Steak','Bone Marrow','Tasting Menu',
+    'Cronut','Dalgona Coffee','Cloud Bread','TikTok Pasta','Feta Pasta','Viral Latte','Iced Matcha','Brown Sugar Boba','Strawberry Matcha','Dubai Chocolate',
+    'Air Fryer Chicken','Smashed Avo','Brinner','Brekkie','Brekky','Sanga','Snag','Pavlova','Lamington','Tim Tam'
   ],
-  places: [
-    'Beach','Mountain','Forest','Desert','Jungle','Island','Cave','Volcano','Waterfall','Lake',
-    'River','Ocean','Pond','Swamp','Meadow','Valley','Cliff','Canyon','Glacier','Reef',
-    'Library','Museum','School','Hospital','Bank','Post Office','Police Station','Fire Station','Theatre','Cinema',
-    'Restaurant','Cafe','Bakery','Bar','Pub','Club','Gym','Pool','Park','Zoo',
-    'Stadium','Arena','Mall','Market','Supermarket','Pharmacy','Bookstore','Library','Church','Temple',
-    'Mosque','Cemetery','Castle','Palace','Monument','Statue','Bridge','Tunnel','Airport','Train Station',
-    'Bus Stop','Subway','Harbor','Marina','Lighthouse','Pier','Dock','Farm','Barn','Greenhouse',
-    'Office','Factory','Warehouse','Laboratory','Studio','Workshop','Garage','Parking Lot','Playground','Skate Park',
-    'Tokyo','Paris','New York','London','Sydney','Cairo','Mumbai','Rio','Moscow','Toronto',
-    'Space Station','Submarine','Pirate Ship','Treehouse','Igloo','Tent','Cabin','Mansion','Apartment','Hotel'
-  ],
-  objects: [
-    'Phone','Laptop','Tablet','Monitor','Keyboard','Mouse','Printer','Camera','Headphones','Speaker',
-    'Television','Remote','Charger','Cable','Adapter','Battery','Flashlight','Lamp','Clock','Watch',
-    'Wallet','Purse','Keys','Sunglasses','Glasses','Hat','Scarf','Gloves','Umbrella','Backpack',
-    'Suitcase','Bottle','Cup','Mug','Plate','Bowl','Fork','Knife','Spoon','Napkin',
-    'Toothbrush','Toothpaste','Soap','Towel','Comb','Hairbrush','Mirror','Scissors','Razor','Shampoo',
-    'Pen','Pencil','Marker','Notebook','Stapler','Tape','Glue','Ruler','Calculator','Eraser',
-    'Book','Magazine','Newspaper','Envelope','Stamp','Letter','Card','Gift','Balloon','Candle',
-    'Pillow','Blanket','Sheet','Mattress','Bed','Chair','Table','Sofa','Desk','Shelf',
-    'Hammer','Screwdriver','Wrench','Drill','Saw','Nails','Screws','Tape Measure','Level','Pliers',
-    'Broom','Mop','Bucket','Sponge','Detergent','Vacuum','Trash Can','Iron','Laundry Basket','Drying Rack',
-    'Ball','Racket','Bat','Helmet','Bicycle','Skateboard','Scooter','Tennis','Football','Basketball'
-  ],
-  movies: [
-    'Star Wars','Jurassic Park','Titanic','The Matrix','Avatar','Forrest Gump','The Godfather','Pulp Fiction',
-    'Inception','The Dark Knight','Gladiator','Braveheart','Rocky','Casablanca','Gone with the Wind',
-    'E.T.','Jaws','Frozen','Toy Story','Finding Nemo','Shrek','The Lion King','Up','Coco','Moana',
-    'Harry Potter','Lord of the Rings','Indiana Jones','Pirates of the Caribbean','Back to the Future',
-    'The Avengers','Iron Man','Spider-Man','Batman','Superman','Wonder Woman','Black Panther','Doctor Strange',
-    'Guardians of the Galaxy','Thor','Captain America','Deadpool','Logan','Joker','Frozen','Tangled',
-    'Cinderella','Snow White','Sleeping Beauty','Beauty and the Beast','Aladdin','The Little Mermaid','Mulan',
-    'The Incredibles','Monsters Inc','WALL-E','Ratatouille','Cars','Inside Out','Soul','Encanto',
-    'Top Gun','Mission Impossible','James Bond','Die Hard','Terminator','Predator','Aliens',
-    'The Notebook','Pretty Woman','La La Land','Grease','Dirty Dancing','Mamma Mia','The Sound of Music',
-    'Home Alone','Elf','The Hangover','Bridesmaids','Step Brothers','Anchorman','Mean Girls','Clueless'
+  apps: [
+    'Instagram','TikTok','Snapchat','BeReal','Twitter','X','Threads','Bluesky','Mastodon','Reddit',
+    'WhatsApp','Telegram','Signal','iMessage','Discord','Slack','Teams','Zoom','Google Meet','FaceTime',
+    'Spotify','Apple Music','YouTube Music','SoundCloud','Bandcamp','Audible','Podcasts','Netflix','Disney+','Stan',
+    'Uber','Lyft','DiDi','Ola','Grab','Gojek','Bolt','DoorDash','Uber Eats','Menulog',
+    'Deliveroo','Just Eat','Foodora','EASI','HelloFresh','Uber Direct','Tasty','Yelp','Tripadvisor','Google Maps',
+    'Apple Maps','Waze','Citymapper','Moovit','Google Pay','Apple Pay','Samsung Wallet','Afterpay','Zip Pay','Klarna',
+    'Notion','Obsidian','Roam','Evernote','OneNote','Bear','Things','Todoist','TickTick','Trello',
+    'Strava','Nike Run Club','Fitbit','MyFitnessPal','Calm','Headspace','Insight Timer','Duolingo','Babbel','Busuu',
+    'Tinder','Bumble','Hinge','Grindr','Coffee Meets Bagel','The League','OkCupid','Match','eHarmony','Happn'
   ],
 };
 
@@ -320,11 +328,13 @@ function renderSetup(){
   const tabRow = el('div',{class:'tabs'});
   const cats = [
     ['random','Random'],
-    ['animals','Animals'],
+    ['brands','Brands'],
+    ['tech','Tech'],
+    ['slang','Slang'],
+    ['music','Music'],
+    ['tv','TV'],
     ['food','Food'],
-    ['places','Places'],
-    ['objects','Objects'],
-    ['movies','Movies'],
+    ['apps','Apps'],
     ['custom','Custom'],
   ];
   cats.forEach(([k,label])=>{
@@ -522,6 +532,10 @@ function render(){
 
 /* ---------- Boot ---------- */
 load();
+// sanitize persisted state against the current pack keys
+if(STATE.category && STATE.category!=='random' && STATE.category!=='custom' && !PACKS[STATE.category]){
+  STATE.category = 'random';
+}
 // migrate players if empty
 if(!STATE.players || !STATE.players.length) STATE.players=['Player 1'];
 render();
