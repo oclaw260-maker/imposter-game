@@ -513,46 +513,71 @@ function revealWord(){
     app.appendChild(el('p',{class:'center muted'},["Don't say the word. Hint at it without giving it away."]));
   }
 
+  const isLast = STATE.turnIndex >= STATE.players.length - 1;
   const hide = el('button',{class:'primary', onClick:()=>{
     STATE.turnIndex++;
     if(STATE.turnIndex >= STATE.players.length){
-      STATE.screen = 'play';
+      // Last player: push to history and show a "cover the phone" gate
       STATE.history.push({
         word: STATE.word,
         imposter: STATE._imposters.map(idx => STATE.players[idx]),
         players: STATE.players.slice(),
       });
       save();
-      render();
+      renderCoverThenPlay();
     } else {
       render();
     }
-  }},['Hide & pass']);
+  }},[isLast ? 'Hide & finish' : 'Hide & pass']);
   app.appendChild(el('div',{class:'bottom-actions'},[hide]));
-  app.appendChild(el('p',{class:'note'},['Screen is yours alone until you tap "Hide & pass".']));
+  app.appendChild(el('p',{class:'note'},['Screen is yours alone until you tap "Hide & '+(isLast?'finish':'pass')+'".']));
+}
+
+// Shown after the last player hides their role. Forces them to put the
+// phone face-down before the play screen (which can later reveal the
+// topic) loads. Prevents anyone peeking at the secret from the side.
+function renderCoverThenPlay(){
+  const app = $('#app'); app.innerHTML='';
+  app.appendChild(el('div',{class:'reveal-screen'},[
+    el('div',{class:'hand'},['📵']),
+    el('h2',{class:'center'},['Cover the phone']),
+    el('p',{class:'center muted'},['Put it face-down (or close your eyes). Everyone should look away.']),
+    el('button',{class:'primary', onClick:()=>{ STATE.screen='play'; render(); }},["I'm ready — open the round"]),
+  ]));
 }
 
 function renderPlay(){
   const app = $('#app'); app.innerHTML='';
   app.appendChild(el('h1',{},['Round in play']));
-  app.appendChild(el('p',{},['Everyone has seen their role. Now talk it out, give clues, and vote out the imposter.']));
+  app.appendChild(el('p',{},['Everyone has seen their role. Discuss, give clues, then vote out the imposter.']));
 
-  // Reminder of word for host (hidden-style)
   const card = el('div',{class:'card'},[
-    el('h2',{},['Round summary']),
-    el('div',{class:'muted small'},['Secret word']),
-    el('div',{class:'huge'},[STATE.word]),
+    el('div',{class:'muted small'},['Secret word (hidden until host reveals)']),
+    el('div',{id:'word-cover', class:'huge', style:'color:#666'},['••••••']),
     el('hr',{class:'hr'}),
-    el('div',{class:'muted small'},['Imposter'+(STATE._imposters.length>1?'s':'')]),
-    el('div',{class:'tag-row'}, STATE._imposters.map(idx =>
-      el('span',{class:'tag on'},[STATE.players[idx]])
-    )),
+    el('div',{class:'muted small'},['Imposter'+(STATE._imposters.length>1?'s':'')+' (hidden until host reveals)']),
+    el('div',{id:'imp-cover', class:'tag-row'},[
+      el('span',{class:'tag', style:'opacity:.5'},[Array(STATE._imposters.length).fill('? ? ?').join('  ')]),
+    ]),
   ]);
   app.appendChild(card);
 
-  const reveal = el('button',{class:'primary', onClick:()=>{ STATE.screen='end'; render(); }},['Reveal imposter']);
+  const reveal = el('button',{class:'primary', onClick:()=>{
+    // Reveal both pieces in place
+    const wc = document.getElementById('word-cover');
+    const ic = document.getElementById('imp-cover');
+    if(wc){ wc.textContent = STATE.word; wc.style.color = 'var(--ink)'; }
+    if(ic){
+      ic.innerHTML = '';
+      STATE._imposters.forEach(idx => ic.appendChild(el('span',{class:'tag on'},[STATE.players[idx]])));
+    }
+    reveal.disabled = true;
+    reveal.textContent = 'Revealed';
+    reveal.style.opacity = '.5';
+  }},['Reveal word & imposter']);
   const newRound = el('button',{class:'ghost', onClick:()=>{ STATE.screen='setup'; render(); }},['New round']);
   app.appendChild(el('div',{class:'row'},[reveal, newRound]));
+  app.appendChild(el('p',{class:'small muted', style:'text-align:center; margin-top:8px'},['Only the host should tap "Reveal" — keep the phone face-down until then.']));
 }
 
 function renderEnd(){
