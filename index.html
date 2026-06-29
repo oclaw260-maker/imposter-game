@@ -91,6 +91,77 @@ label{font-size:13px; color:var(--muted); display:block; margin:12px 0 6px}
 .tag.on{background:var(--accent); border-color:var(--accent); color:#fff}
 .reveal-screen{min-height:60vh; display:flex; flex-direction:column; justify-content:center}
 .hand{font-size:80px; text-align:center; margin:8px 0}
+.hold-card{
+  position:relative; border-radius:24px; padding:36px 24px;
+  color:#fff; text-align:center;
+  background:linear-gradient(135deg,#ff4d4d 0%,#ff8a3d 20%,#ffd23f 40%,#34d399 60%,#4f9bff 80%,#b14dff 100%);
+  background-size:220% 220%;
+  animation:holdShift 14s ease infinite;
+  box-shadow:0 16px 48px rgba(255,77,77,.3),0 4px 12px rgba(0,0,0,.35);
+  -webkit-user-select:none; user-select:none;
+  -webkit-touch-callout:none;
+  touch-action:none; cursor:pointer;
+  min-height:56vh;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.hold-card.holding{
+  transform:scale(1.015);
+  box-shadow:0 24px 60px rgba(255,138,61,.45),0 8px 24px rgba(0,0,0,.45);
+}
+@keyframes holdShift{
+  0%,100%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+}
+.hold-card .name{
+  font-size:30px; font-weight:700; letter-spacing:-.02em;
+  text-shadow:0 2px 12px rgba(0,0,0,.35);
+}
+.hold-card .reveal-content{
+  opacity:0; transform:translateY(8px);
+  transition:opacity .15s ease, transform .15s ease;
+  min-height:96px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+  pointer-events:none;
+}
+.hold-card.holding .reveal-content{
+  opacity:1; transform:translateY(0);
+}
+.hold-card .word{
+  font-size:42px; font-weight:800; letter-spacing:-.02em; line-height:1.1;
+  text-shadow:0 4px 16px rgba(0,0,0,.45);
+  word-break:break-word; max-width:100%;
+}
+.hold-card .imp-tag{
+  display:inline-block; background:rgba(0,0,0,.32); color:#fff;
+  padding:5px 14px; border-radius:999px;
+  font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+}
+.hold-card .imp-topic{
+  font-size:22px; font-weight:700; text-shadow:0 2px 8px rgba(0,0,0,.35);
+}
+.hold-card .imp-samples{
+  font-size:18px; font-weight:600; opacity:.95; text-shadow:0 1px 4px rgba(0,0,0,.3);
+  text-align:center;
+}
+.hold-card .hint{
+  font-size:12px; text-transform:uppercase; letter-spacing:.14em; font-weight:700;
+  padding:8px 18px; border-radius:999px; background:rgba(0,0,0,.22);
+  display:inline-flex; align-items:center; gap:8px;
+}
+.hold-card .hint::before{
+  content:''; width:8px; height:8px; border-radius:50%; background:#fff;
+  box-shadow:0 0 0 0 rgba(255,255,255,.7);
+  animation:pulseDot 1.6s ease-in-out infinite;
+}
+.hold-card.holding .hint::before{
+  animation:none; opacity:.55;
+}
+@keyframes pulseDot{
+  0%{box-shadow:0 0 0 0 rgba(255,255,255,.65)}
+  70%{box-shadow:0 0 0 12px rgba(255,255,255,0)}
+  100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}
+}
 .bottom-actions{margin-top:auto; display:flex; flex-direction:column; gap:8px}
 .toggle{display:flex; align-items:center; justify-content:space-between; padding:10px 0}
 .toggle input{width:auto}
@@ -477,47 +548,43 @@ function renderReveal(){
   const i = STATE.turnIndex;
   const name = STATE.players[i];
 
-  app.appendChild(el('h1',{},['Pass the phone']));
-  app.appendChild(el('p',{},['Player '+(i+1)+' of '+total+' — '+name]));
+  app.appendChild(el('p',{class:'small muted center'},['Player '+(i+1)+' of '+total+' — '+name]));
 
-  const screen = el('div',{class:'reveal-screen'},[
-    el('div',{class:'hand'},['🤫']),
-    el('p',{class:'center muted'},['Tap "Reveal" when only '+name+' can see the screen.']),
-    el('button',{class:'primary', onClick:revealWord},['Reveal']),
+  const card = el('div',{class:'hold-card', 'data-role':'hold-card'},[
+    el('div',{class:'name'},[name]),
+    el('div',{class:'reveal-content'},[
+      // Filled in once we render the secret below
+    ]),
+    el('div',{class:'hint'},['Hold to reveal']),
   ]);
-  app.appendChild(screen);
+  app.appendChild(card);
 
-  const back = el('button',{class:'ghost', onClick:()=>{
-    if(confirm('Abandon this round?')){ STATE.screen='setup'; render(); }
-  }},['Abandon round']);
-  app.appendChild(el('div',{class:'bottom-actions'},[back]));
-}
-
-function revealWord(){
-  const app = $('#app'); app.innerHTML='';
-  const i = STATE.turnIndex;
+  // Decide what gets revealed when the player presses & holds the card.
   const isImp = STATE._imposters.includes(i);
-  const name = STATE.players[i];
-
-  app.appendChild(el('h1',{},[name]));
+  const revealSlot = card.querySelector('.reveal-content');
   if(isImp){
     const hint = makeHint();
-    app.appendChild(el('div',{class:'secret imposter'},['YOU ARE THE IMPOSTER']));
-    app.appendChild(el('p',{class:'center muted'},["You don't know the word. Bluff using the hint below."]));
-    app.appendChild(el('div',{class:'card', style:'text-align:center'},[
-      el('div',{class:'muted small'},['Topic: '+hint.label]),
-      el('div',{class:'huge', style:'font-size:20px; margin-top:6px'},[hint.samples.join('  ·  ')]),
-    ]));
+    revealSlot.appendChild(el('div',{class:'imp-tag'},['Imposter']));
+    revealSlot.appendChild(el('div',{class:'imp-topic'},[hint.label]));
+    revealSlot.appendChild(el('div',{class:'imp-samples'},[hint.samples.join('  ·  ')]));
   } else {
-    app.appendChild(el('div',{class:'secret'},[STATE.word]));
-    app.appendChild(el('p',{class:'center muted'},["Don't say the word. Hint at it without giving it away."]));
+    revealSlot.appendChild(el('div',{class:'word'},[STATE.word]));
   }
 
-  const isLast = STATE.turnIndex >= STATE.players.length - 1;
-  const hide = el('button',{class:'primary', onClick:()=>{
-    STATE.turnIndex++;
-    if(STATE.turnIndex >= STATE.players.length){
-      // Last player: push to history and show a "cover the phone" gate
+  // Pointer / touch / mouse handlers — reveal while held, hide on release.
+  // After the final player releases, advance to the next player or the
+  // cover screen.
+  const isLast = i >= STATE.players.length - 1;
+  let didAdvance = false;
+
+  function show(){ card.classList.add('holding'); }
+  function hide(){ card.classList.remove('holding'); }
+
+  function release(){
+    hide();
+    if(didAdvance) return;
+    didAdvance = true;
+    if(isLast){
       STATE.history.push({
         word: STATE.word,
         imposter: STATE._imposters.map(idx => STATE.players[idx]),
@@ -526,11 +593,41 @@ function revealWord(){
       save();
       renderCoverThenPlay();
     } else {
+      STATE.turnIndex++;
       render();
     }
-  }},[isLast ? 'Hide & finish' : 'Hide & pass']);
-  app.appendChild(el('div',{class:'bottom-actions'},[hide]));
-  app.appendChild(el('p',{class:'note'},['Screen is yours alone until you tap "Hide & '+(isLast?'finish':'pass')+'".']));
+  }
+
+  // Touch (mobile — the primary case for "screen touch")
+  card.addEventListener('touchstart', e=>{ e.preventDefault(); show(); }, {passive:false});
+  card.addEventListener('touchend',   e=>{ e.preventDefault(); release(); }, {passive:false});
+  card.addEventListener('touchcancel', e=>{ e.preventDefault(); release(); }, {passive:false});
+
+  // Mouse (desktop preview / keyboard a11y)
+  card.addEventListener('mousedown', e=>{ e.preventDefault(); show(); });
+  card.addEventListener('mouseup',   e=>{ e.preventDefault(); release(); });
+  card.addEventListener('mouseleave',e=>{ if(card.classList.contains('holding')) release(); });
+
+  card.setAttribute('tabindex','0');
+  card.setAttribute('role','button');
+  card.setAttribute('aria-label','Hold to reveal your role');
+  card.addEventListener('keydown', e=>{
+    if(e.key===' '||e.key==='Enter'){ e.preventDefault(); show(); }
+  });
+  card.addEventListener('keyup', e=>{
+    if(e.key===' '||e.key==='Enter'){ e.preventDefault(); release(); }
+  });
+
+  const back = el('button',{class:'ghost', onClick:()=>{
+    if(confirm('Abandon this round?')){ STATE.screen='setup'; render(); }
+  }},['Abandon round']);
+  app.appendChild(el('div',{class:'bottom-actions'},[back]));
+}
+
+function revealWord(){
+  // Legacy entry point — renderReveal now builds the hold-to-reveal card
+  // directly, so this is kept only as a safety net for stale callers.
+  renderReveal();
 }
 
 // Shown after the last player hides their role. Forces them to put the
