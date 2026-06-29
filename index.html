@@ -92,6 +92,51 @@ label{font-size:13px; color:var(--muted); display:block; margin:12px 0 6px}
 .tag.on{background:var(--accent); border-color:var(--accent); color:#fff}
 .reveal-screen{min-height:60vh; display:flex; flex-direction:column; justify-content:center}
 .hand{font-size:80px; text-align:center; margin:8px 0}
+.starter-reveal{
+  position:relative; border-radius:20px; padding:28px 18px;
+  color:#fff; text-align:center;
+  background:linear-gradient(135deg,#ff4d4d 0%,#ff8a3d 25%,#ffd23f 50%,#34d399 75%,#4f9bff 100%);
+  background-size:200% 200%;
+  animation:holdShift 12s ease infinite;
+  box-shadow:0 12px 36px rgba(255,77,77,.3),0 4px 12px rgba(0,0,0,.35);
+  cursor:pointer; -webkit-user-select:none; user-select:none;
+  -webkit-touch-callout:none; touch-action:manipulation;
+  min-height:160px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+  transition:transform .12s ease, box-shadow .12s ease, min-height .25s ease;
+  margin:18px 0 4px;
+}
+.starter-reveal:active{transform:scale(.99)}
+.starter-reveal.locked{
+  background:linear-gradient(135deg,#34d399 0%,#4f9bff 100%);
+  animation:none;
+  box-shadow:0 12px 36px rgba(52,211,153,.4),0 4px 12px rgba(0,0,0,.35);
+  min-height:200px;
+}
+.starter-scramble{
+  font-size:18px; font-weight:600; letter-spacing:.04em;
+  text-shadow:0 2px 8px rgba(0,0,0,.4);
+  font-variant-numeric:tabular-nums;
+}
+.starter-name{
+  font-size:42px; font-weight:800; letter-spacing:-.02em; line-height:1.05;
+  text-shadow:0 4px 18px rgba(0,0,0,.5);
+  animation:starterPop .35s cubic-bezier(.5,1.7,.4,1) both;
+}
+@keyframes starterPop{
+  0%{transform:scale(.7); opacity:0}
+  100%{transform:scale(1); opacity:1}
+}
+.starter-foot{font-size:13px; opacity:.92}
+.ready-btn{
+  opacity:0; max-height:0; padding-top:0; padding-bottom:0; margin-top:0;
+  pointer-events:none; overflow:hidden;
+  transition:opacity .25s ease, max-height .25s ease, padding .25s ease, margin .25s ease;
+}
+.ready-btn.visible{
+  opacity:1; max-height:80px; padding-top:14px; padding-bottom:14px; margin-top:14px;
+  pointer-events:auto;
+}
 .hold-card{
   position:relative; border-radius:24px; padding:36px 24px;
   color:#fff; text-align:center;
@@ -696,22 +741,110 @@ function revealWord(){
 }
 
 // Shown after the last player hides their role. Forces them to put the
-// phone face-down before the play screen (which can later reveal the
-// topic) loads. Prevents anyone peeking at the secret from the side.
+// phone face-down, then scrambles and picks a random starter.
+// Imposters always go LAST — they need to hear a clue or two first
+// so they can fake it. This gate picks the starter from the
+// non-imposter pool; if somehow every player is an imposter (only
+// possible with edge-case settings) we fall back to a random name.
+function pickStarter(){
+  const pool = STATE.players
+    .map((name,i)=>({name, i}))
+    .filter(p => !STATE._imposters.includes(p.i));
+  const list = pool.length ? pool : STATE.players.map((name,i)=>({name,i}));
+  // Fisher–Yates shuffle, take the first
+  for(let i=list.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [list[i],list[j]] = [list[j],list[i]];
+  }
+  return list[0];
+}
+
 function renderCoverThenPlay(){
   const app = $('#app'); app.innerHTML='';
+  STATE._startPlayer = pickStarter();
+
+  const starterName = STATE.players[STATE._startPlayer.i];
+
+  // The big "starter" reveal — scrambles through names then locks.
+  // Default state: shows a "Tap to pick who starts" prompt. Only after
+  // the scramble lands does the "open the round" button appear, so a
+  // face-down host never hits the ready button before naming a starter.
+  const starterEl = el('div',{class:'starter-reveal', role:'button', tabindex:'0', 'aria-label':'Reveal who starts'},[
+    el('div',{class:'starter-scramble', 'aria-live':'polite'},['Tap to pick who starts']),
+    el('div',{class:'starter-name', style:'display:none'},[starterName]),
+    el('div',{class:'starter-foot small muted', style:'display:none'},['🎤 Starts the discussion']),
+  ]);
+  const readyBtn = el('button',{class:'primary ready-btn', onClick:()=>{ STATE.screen='play'; render(); }},[
+    'I\'ve got it — open the round',
+  ]);
+
   app.appendChild(el('div',{class:'reveal-screen'},[
     el('div',{class:'hand'},['📵']),
     el('h2',{class:'center'},['Cover the phone']),
-    el('p',{class:'center muted'},['Put it face-down (or close your eyes). Everyone should look away.']),
-    el('button',{class:'primary', onClick:()=>{ STATE.screen='play'; render(); }},["I'm ready — open the round"]),
+    el('p',{class:'center muted'},['Pass it to whoever\'s going to tap next. Everyone else look away.']),
+    starterEl,
+    readyBtn,
   ]));
+
+  // Wire the scramble-on-tap behaviour.
+  let locked = false;
+  const scrambleEl = starterEl.querySelector('.starter-scramble');
+
+  function startScramble(){
+    if(locked) return;
+    locked = true;
+    starterEl.setAttribute('aria-pressed','true');
+
+    // Animated scramble of every player name + decorative words so
+    // someone glancing sideways can't read the final answer before
+    // it stops. Stops on the picked starter.
+    const blurbs = [...new Set([
+      ...STATE.players,
+      'Tap reveal', 'All eyes 👀', 'Drama club',
+      'Secret word', 'Bluff master', 'Not it',
+      'Spy vibes',  'Cover story',
+    ])];
+    const stops = 24;          // total number of flicker frames
+    const interval = 45;       // ms between frames
+    let n = 0;
+
+    const tick = setInterval(()=>{
+      const idx = Math.floor(Math.random()*blurbs.length);
+      scrambleEl.textContent = blurbs[idx];
+      n++;
+      if(n >= stops){
+        clearInterval(tick);
+        starterEl.classList.add('locked');
+        // Swap to the locked-in name and reveal the ready button.
+        if(scrambleEl) scrambleEl.style.display = 'none';
+        const nameEl = starterEl.querySelector('.starter-name');
+        const footEl = starterEl.querySelector('.starter-foot');
+        if(nameEl)   nameEl.style.display   = '';
+        if(footEl)   footEl.style.display   = '';
+        readyBtn.classList.add('visible');
+        try { readyBtn.focus(); } catch(_){}
+      }
+    }, interval);
+  }
+
+  starterEl.addEventListener('click', startScramble);
+  starterEl.addEventListener('keydown', e=>{
+    if(e.key===' '||e.key==='Enter'){ e.preventDefault(); startScramble(); }
+  });
 }
 
 function renderPlay(){
   const app = $('#app'); app.innerHTML='';
   app.appendChild(el('h1',{},['Round in play']));
   app.appendChild(el('p',{},['Everyone has seen their role. Discuss, give clues, then vote out the imposter.']));
+
+  // Surface the picked starter so no one forgets who goes first.
+  if(STATE._startPlayer && STATE.players[STATE._startPlayer.i]){
+    app.appendChild(el('div',{class:'card', style:'text-align:center; padding:14px 16px; margin-bottom:12px'},[
+      el('div',{class:'muted small'},['Starts the discussion']),
+      el('div',{style:'font-size:26px; font-weight:700; margin-top:2px'},[STATE.players[STATE._startPlayer.i]]),
+    ]));
+  }
 
   const card = el('div',{class:'card'},[
     el('div',{class:'muted small'},['Secret word (hidden until host reveals)']),
