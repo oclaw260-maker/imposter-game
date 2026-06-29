@@ -82,6 +82,11 @@ label{font-size:13px; color:var(--muted); display:block; margin:12px 0 6px}
 .tabs{display:flex; gap:6px; margin-bottom:12px}
 .tabs button{flex:1; padding:10px; font-size:14px}
 .tabs button.active{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600}
+/* Difficulty colour-coding — only the active-state background differs per
+   difficulty, fallback to accent (red) when nothing matches. */
+.tabs button.active.diff-easy  { background:var(--good);   border-color:var(--good);   color:#0b0b0b; }
+.tabs button.active.diff-medium{ background:#ffb020;         border-color:#ffb020;         color:#0b0b0b; }
+.tabs button.active.diff-hard  { background:var(--accent); border-color:var(--accent); color:#fff; }
 .list{display:flex; flex-direction:column; gap:6px; max-height:42vh; overflow:auto; padding-right:4px}
 .list .item{
   display:flex; align-items:center; gap:8px; padding:10px 12px;
@@ -301,9 +306,20 @@ const STATE = {
   imposters: 1,
   category: 'random',
   customCategory: '',
+  difficulty: 'medium',    // easy | medium | hard — controls imposter hint richness
   word: '',
   turnIndex: 0,
   history: [],             // [{word, imposter, players}]
+};
+
+/* Difficulty -> how much hint the imposter sees beside the theme label.
+   Easy   = 5 samples (massive foothold — bluffing is trivial)
+   Medium = 3 samples (default, balanced)
+   Hard   = 1 sample  (tiny foothold — easy to mis-clue and out yourself) */
+const DIFFICULTY = {
+  easy:   { label: 'Easy',   samples: 5, hint: 'Lots of help — easiest to bluff.' },
+  medium: { label: 'Medium', samples: 3, hint: 'Balanced — a small foothold, time to fake it.' },
+  hard:   { label: 'Hard',   samples: 1, hint: 'One sample — easy to mis-clue and out yourself.' },
 };
 
 const STORAGE_KEY = 'imposter-v1';
@@ -498,6 +514,7 @@ function findSecretGroup(){
   return null;
 }
 // Build the imposter hint from the secret's sub-group.
+// Hint richness is driven by STATE.difficulty.
 function makeHint(){
   const group = findSecretGroup();
   if(!group){
@@ -505,7 +522,8 @@ function makeHint(){
   }
   const w = (STATE.word||'').toLowerCase();
   const candidates = group.words.filter(x => x.toLowerCase() !== w);
-  const samples = shuffle(candidates).slice(0, 3);
+  const n = DIFFICULTY[STATE.difficulty]?.samples ?? 3;
+  const samples = shuffle(candidates).slice(0, Math.min(n, candidates.length));
   return { label: group.theme, samples };
 }
 
@@ -587,6 +605,27 @@ function renderSetup(){
   }
   renderImp();
   app.appendChild(impRow);
+
+  // Difficulty (how much hint the imposter sees)
+  app.appendChild(el('label',{},['Difficulty']));
+  const diffRow = el('div',{class:'tabs'});
+  ['easy','medium','hard'].forEach(k=>{
+    const b = el('button',{
+      class: STATE.difficulty===k ? 'active diff-'+k : '',
+      onClick:()=>{
+        STATE.difficulty=k; save();
+        // Re-render only the difficulty row so the hint line updates in place.
+        diffRow.querySelectorAll('button').forEach(btn=>btn.classList.remove('active'));
+        b.classList.add('active');
+        hintHint.textContent = DIFFICULTY[k].hint;
+      },
+    },[DIFFICULTY[k].label]);
+    diffRow.appendChild(b);
+  });
+  app.appendChild(diffRow);
+  const hintHint = el('p',{class:'small muted', style:'margin-top:6px'},
+                       [DIFFICULTY[STATE.difficulty].hint]);
+  app.appendChild(hintHint);
 
   app.appendChild(el('hr',{class:'hr'}));
 
@@ -928,6 +967,7 @@ function showHelp(){
         el('li',{},[el('b',{},['Setup']), ' — add 2 or more player names, choose how many imposters, and pick a category of words.']),
         el('li',{},[el('b',{},['Pass & reveal']), ' — hand the phone around. Each player presses and holds their colourful card to secretly see their role, then releases to hide it again.']),
         el('li',{},[el('b',{},['Roles']), ' — most players see the secret word. The imposter(s) see ', el('i',{},['only']), ' a hint about the topic (e.g. "Sitcoms") plus a few example words. Their job is to bluff.']),
+        el('li',{},[el('b',{},['Difficulty']), ' — Easy gives the imposter 5 sample words to lean on (super easy to bluff). Medium shows 3 samples (balanced). Hard shows just 1 sample (a tiny foothold — easy to mis-clue and out yourself). Pick your poison each round.']),
         el('li',{},[el('b',{},['Game on']), ' — once everyone has taken their turn, the host covers the phone. Players take turns giving one-word clues (no saying the word itself!) then debate and vote out a suspected imposter.']),
         el('li',{},[el('b',{},['Reveal']), ' — the host taps "Reveal word & imposter" on the play screen to show who the imposter was. Hit "Play again" for another round with the same setup.']),
         el('li',{},[el('b',{},['Tip']), ' — phone screen is your friend: pass confidently, keep it covered between turns, and don\'t peek at someone else\'s card.']),
@@ -984,6 +1024,8 @@ load();
 if(STATE.category && STATE.category!=='random' && STATE.category!=='custom' && !PACKS[STATE.category]){
   STATE.category = 'random';
 }
+// sanitize difficulty (new field — old localStorage will lack it)
+if(!DIFFICULTY[STATE.difficulty]) STATE.difficulty = 'medium';
 // migrate players if empty
 if(!STATE.players || !STATE.players.length) STATE.players=['Player 1'];
 render();
