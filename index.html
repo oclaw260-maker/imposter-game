@@ -117,7 +117,15 @@ label{font-size:13px; color:var(--muted); display:block; margin:12px 0 6px}
   background:#1c1c1c; border:1px solid var(--line); font-size:12px; color:var(--muted);
   margin-right:6px; margin-top:4px;
 }
-.tabs{display:flex; gap:6px; margin-bottom:12px}
+.tabs{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px}
+/* On the category tabs row we need to support multi-line wrap WITHOUT
+   stretching the buttons across the full row (the default flex:1 pulls
+   them to fill the line) — category buttons should sit at their natural
+   width and wrap naturally. The other tab rows (imposters, difficulty)
+   still want flex:1 to evenly share a single line. We scope by parent
+   class so the two cases stay separate. */
+.cat-tabs{width:100%}
+.cat-tabs button{flex:0 0 auto; padding:10px 12px; font-size:14px}
 .tabs button{flex:1; padding:10px; font-size:14px}
 .tabs button.active{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600}
 /* Difficulty colour-coding — only the active-state background differs per
@@ -739,24 +747,27 @@ function renderSetup(){
 
   app.appendChild(el('hr',{class:'hr'}));
 
-  // Category
+  // Category — emoji-iconed buttons that wrap onto multiple lines on
+  // narrow phones. Each tab stores both the visible icon and label so the
+  // matching description line below can reuse the same icon.
   app.appendChild(el('label',{},['Category']));
-  const tabRow = el('div',{class:'tabs'});
+  const tabRow = el('div',{class:'tabs cat-tabs'});
   const cats = [
-    ['random','Random'],
-    ['brands','Brands'],
-    ['tech','Tech'],
-    ['slang','Slang'],
-    ['music','Music'],
-    ['tv','TV'],
-    ['food','Food'],
-    ['apps','Apps'],
-    ['custom','Custom'],
+    ['random', 'Random',  '🎲'],
+    ['brands', 'Brands',  '🛍️'],
+    ['tech',   'Tech',    '💻'],
+    ['slang',  'Slang',   '🗣️'],
+    ['music',  'Music',   '🎵'],
+    ['tv',     'TV',      '📺'],
+    ['food',   'Food',    '🍔'],
+    ['apps',   'Apps',    '📱'],
+    ['custom', 'Custom',  '✏️'],
   ];
-  cats.forEach(([k,label])=>{
+  cats.forEach(([k,label,icon])=>{
     const b = el('button',{ class: STATE.category===k ? 'active':'', onClick:()=>{
       STATE.category=k; save(); renderSetup();
-    }},[label]);
+    }},[icon+' '+label]);
+    b.setAttribute('aria-label', label);
     tabRow.appendChild(b);
   });
   app.appendChild(tabRow);
@@ -766,13 +777,15 @@ function renderSetup(){
     const ta = el('input',{type:'text', placeholder:'e.g. Surfboard, Espresso, Telescope', value:STATE.customCategory});
     ta.addEventListener('input', e=>{ STATE.customCategory=e.target.value; save(); });
     app.appendChild(ta);
-    app.appendChild(el('p',{class:'small muted'},['Need at least 2 words.']));
+    app.appendChild(el('p',{class:'small muted'},['✏️ Need at least 2 words.']));
   } else if(STATE.category!=='random'){
     const groups = PACKS[STATE.category] || [];
     const wordCount = groups.reduce((n,g)=>n+g.words.length, 0);
-    app.appendChild(el('p',{class:'small muted'},[wordCount+' '+pluralize(wordCount,'word')+' across '+groups.length+' sub-themes.']));
+    const meta = cats.find(([k])=>k===STATE.category);
+    const icon = meta ? meta[2] : '•';
+    app.appendChild(el('p',{class:'small muted'},[`${icon} ${wordCount} ${pluralize(wordCount,'word')} across ${groups.length} sub-themes.`]));
   } else {
-    app.appendChild(el('p',{class:'small muted'},['Pulls from all categories.']));
+    app.appendChild(el('p',{class:'small muted'},['🎲 Pulls from all categories.']));
   }
 
   app.appendChild(el('hr',{class:'hr'}));
