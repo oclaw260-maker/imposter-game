@@ -19,6 +19,7 @@ body{
   overscroll-behavior:none;
 }
 .app{
+  position:relative;
   min-height:100%; min-height:100dvh;
   display:flex; flex-direction:column;
   padding:max(env(safe-area-inset-top),16px) 16px max(env(safe-area-inset-bottom),16px);
@@ -132,10 +133,24 @@ label{font-size:13px; color:var(--muted); display:block; margin:12px 0 6px}
   text-shadow:0 4px 16px rgba(0,0,0,.45);
   word-break:break-word; max-width:100%;
 }
+.hold-card .imp-headline{
+  font-size:46px; font-weight:900; letter-spacing:.06em; text-transform:uppercase;
+  background:linear-gradient(180deg,#fff 0%,#ffe5b4 100%);
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; color:transparent;
+  text-shadow:0 4px 24px rgba(0,0,0,.45), 0 0 32px rgba(255,77,77,.55);
+  line-height:1; padding:2px 0 6px;
+  animation:impPulse 2.6s ease-in-out infinite;
+}
+@keyframes impPulse{
+  0%,100%{ filter:drop-shadow(0 0 0 rgba(255,77,77,0)); }
+  50%{ filter:drop-shadow(0 0 18px rgba(255,77,77,.55)); }
+}
 .hold-card .imp-tag{
-  display:inline-block; background:rgba(0,0,0,.32); color:#fff;
-  padding:5px 14px; border-radius:999px;
-  font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+  display:inline-block; background:rgba(0,0,0,.45); color:#fff;
+  padding:6px 16px; border-radius:999px;
+  font-size:11px; font-weight:700; letter-spacing:.2em; text-transform:uppercase;
+  border:1px solid rgba(255,255,255,.35);
 }
 .hold-card .imp-topic{
   font-size:22px; font-weight:700; text-shadow:0 2px 8px rgba(0,0,0,.35);
@@ -163,6 +178,42 @@ label{font-size:13px; color:var(--muted); display:block; margin:12px 0 6px}
   100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}
 }
 .bottom-actions{margin-top:auto; display:flex; flex-direction:column; gap:8px}
+.advance-btn{
+  width:100%; padding:16px 12px; border-radius:14px; border:0;
+  background:#fff; color:#0b0b0b; font-weight:700; font-size:16px;
+  cursor:pointer;
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+  transition:transform .08s ease, opacity .2s ease, max-height .25s ease, margin .25s ease, padding .25s ease;
+  opacity:0; max-height:0; padding-top:0; padding-bottom:0; margin-top:0;
+  overflow:hidden; pointer-events:none;
+}
+.advance-btn.visible{
+  opacity:1; max-height:80px; padding-top:16px; padding-bottom:16px; margin-top:14px;
+  pointer-events:auto;
+}
+.advance-btn:active{transform:scale(.98)}
+.help-btn{
+  position:absolute; top:max(env(safe-area-inset-top),12px); right:16px;
+  width:36px; height:36px; border-radius:50%;
+  background:#1c1c1c; border:1px solid var(--line); color:var(--ink);
+  font-weight:700; font-size:18px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.help-btn:active{background:var(--accent); border-color:var(--accent); color:#fff}
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(0,0,0,.7);
+  display:flex; align-items:center; justify-content:center;
+  padding:16px; z-index:50;
+}
+.modal{
+  background:var(--card); border:1px solid var(--line); border-radius:16px;
+  padding:20px; max-width:480px; width:100%;
+  max-height:80vh; overflow:auto;
+}
+.modal h2{margin-top:0}
+.modal ol, .modal ul{padding-left:20px; color:var(--muted)}
+.modal li{margin-bottom:8px}
+.modal .close{display:block; width:100%; margin-top:12px}
 .toggle{display:flex; align-items:center; justify-content:space-between; padding:10px 0}
 .toggle input{width:auto}
 .spacer{height:8px}
@@ -416,6 +467,7 @@ function renderHome(){
 function renderSetup(){
   const app = $('#app'); app.innerHTML='';
   app.appendChild(el('h1',{},['Setup']));
+  app.appendChild(el('button',{class:'help-btn', title:'How to play', 'aria-label':'How to play', onClick:showHelp},['?']));
 
   // Players list
   const list = el('div',{class:'list'});
@@ -548,6 +600,9 @@ function renderReveal(){
   const i = STATE.turnIndex;
   const name = STATE.players[i];
 
+  // Help button — always reachable from every screen.
+  app.appendChild(el('button',{class:'help-btn', title:'How to play', 'aria-label':'How to play', onClick:showHelp},['?']));
+
   app.appendChild(el('p',{class:'small muted center'},['Player '+(i+1)+' of '+total+' — '+name]));
 
   const card = el('div',{class:'hold-card', 'data-role':'hold-card'},[
@@ -564,26 +619,34 @@ function renderReveal(){
   const revealSlot = card.querySelector('.reveal-content');
   if(isImp){
     const hint = makeHint();
-    revealSlot.appendChild(el('div',{class:'imp-tag'},['Imposter']));
+    revealSlot.appendChild(el('div',{class:'imp-headline'},['Imposter']));
+    revealSlot.appendChild(el('div',{class:'imp-tag'},['Your cover story']));
     revealSlot.appendChild(el('div',{class:'imp-topic'},[hint.label]));
     revealSlot.appendChild(el('div',{class:'imp-samples'},[hint.samples.join('  ·  ')]));
   } else {
+    revealSlot.appendChild(el('div',{class:'imp-tag'},['Your secret word']));
     revealSlot.appendChild(el('div',{class:'word'},[STATE.word]));
   }
 
   // Pointer / touch / mouse handlers — reveal while held, hide on release.
-  // After the final player releases, advance to the next player or the
-  // cover screen.
+  // Release only hides. A dedicated "Next player" button (revealed after
+  // the first tap) is what advances the turn — this way a player can
+  // re-check the card without accidentally advancing.
   const isLast = i >= STATE.players.length - 1;
-  let didAdvance = false;
 
-  function show(){ card.classList.add('holding'); }
-  function hide(){ card.classList.remove('holding'); }
-
-  function release(){
-    hide();
-    if(didAdvance) return;
-    didAdvance = true;
+  // Next-player button: hidden until the card has been pressed at least once.
+  const advance = el('button',{class:'advance-btn', 'aria-hidden':'true'},[
+    isLast ? 'I’ve seen it — cover & continue' : 'I’ve seen it — next player',
+  ]);
+  function show(){
+    card.classList.add('holding');
+    advance.classList.add('visible');
+    advance.setAttribute('aria-hidden','false');
+  }
+  function hide(){
+    card.classList.remove('holding');
+  }
+  function advanceTurn(){
     if(isLast){
       STATE.history.push({
         word: STATE.word,
@@ -597,16 +660,17 @@ function renderReveal(){
       render();
     }
   }
+  advance.addEventListener('click', advanceTurn);
 
   // Touch (mobile — the primary case for "screen touch")
   card.addEventListener('touchstart', e=>{ e.preventDefault(); show(); }, {passive:false});
-  card.addEventListener('touchend',   e=>{ e.preventDefault(); release(); }, {passive:false});
-  card.addEventListener('touchcancel', e=>{ e.preventDefault(); release(); }, {passive:false});
+  card.addEventListener('touchend',   e=>{ e.preventDefault(); hide(); }, {passive:false});
+  card.addEventListener('touchcancel', e=>{ e.preventDefault(); hide(); }, {passive:false});
 
   // Mouse (desktop preview / keyboard a11y)
   card.addEventListener('mousedown', e=>{ e.preventDefault(); show(); });
-  card.addEventListener('mouseup',   e=>{ e.preventDefault(); release(); });
-  card.addEventListener('mouseleave',e=>{ if(card.classList.contains('holding')) release(); });
+  card.addEventListener('mouseup',   e=>{ e.preventDefault(); hide(); });
+  card.addEventListener('mouseleave',e=>{ hide(); });
 
   card.setAttribute('tabindex','0');
   card.setAttribute('role','button');
@@ -615,12 +679,13 @@ function renderReveal(){
     if(e.key===' '||e.key==='Enter'){ e.preventDefault(); show(); }
   });
   card.addEventListener('keyup', e=>{
-    if(e.key===' '||e.key==='Enter'){ e.preventDefault(); release(); }
+    if(e.key===' '||e.key==='Enter'){ e.preventDefault(); hide(); }
   });
 
   const back = el('button',{class:'ghost', onClick:()=>{
     if(confirm('Abandon this round?')){ STATE.screen='setup'; render(); }
   }},['Abandon round']);
+  app.appendChild(advance);
   app.appendChild(el('div',{class:'bottom-actions'},[back]));
 }
 
@@ -694,6 +759,30 @@ function renderEnd(){
   app.appendChild(el('div',{class:'row'},[playAgain, setup]));
   app.appendChild(el('div',{class:'spacer'}));
   app.appendChild(home);
+}
+
+function showHelp(){
+  closeHelp();
+  const backdrop = el('div',{class:'modal-backdrop', id:'help-modal'},[
+    el('div',{class:'modal'},[
+      el('h2',{},['How to play']),
+      el('ol',{},[
+        el('li',{},[el('b',{},['Setup']), ' — add 2 or more player names, choose how many imposters, and pick a category of words.']),
+        el('li',{},[el('b',{},['Pass & reveal']), ' — hand the phone around. Each player presses and holds their colourful card to secretly see their role, then releases to hide it again.']),
+        el('li',{},[el('b',{},['Roles']), ' — most players see the secret word. The imposter(s) see ', el('i',{},['only']), ' a hint about the topic (e.g. "Sitcoms") plus a few example words. Their job is to bluff.']),
+        el('li',{},[el('b',{},['Game on']), ' — once everyone has taken their turn, the host covers the phone. Players take turns giving one-word clues (no saying the word itself!) then debate and vote out a suspected imposter.']),
+        el('li',{},[el('b',{},['Reveal']), ' — the host taps "Reveal word & imposter" on the play screen to show who the imposter was. Hit "Play again" for another round with the same setup.']),
+        el('li',{},[el('b',{},['Tip']), ' — phone screen is your friend: pass confidently, keep it covered between turns, and don\'t peek at someone else\'s card.']),
+      ]),
+      el('button',{class:'primary close', onClick:closeHelp},['Got it']),
+    ]),
+  ]);
+  backdrop.addEventListener('click', e=>{ if(e.target===backdrop) closeHelp(); });
+  document.body.appendChild(backdrop);
+}
+function closeHelp(){
+  const m = document.getElementById('help-modal');
+  if(m) m.remove();
 }
 
 function showHistory(){
